@@ -1,0 +1,96 @@
+#!/bin/sh
+# /sbin/init of the ruwebos system disk (no systemd): mounts the data disk, sets up ruvm's user-mode
+# network, runs `rucloud serve` under a watchdog and waits for commands on the console.
+#   /dev/vda  system.ext4 (this disk, booted with -snapshot: changes are thrown away)
+#   /dev/vdb  data.ext4 → /data (rucloud's state_dir: D1, KV, R2, Durable Objects); formatted on first boot
+# Console commands (the launcher types them): `poweroff` stops rucloud, unmounts /data and powers off;
+# `status`; `crash-rucloud` kills rucloud to test the watchdog.
+export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin HOME=/root LANG=C.UTF-8
+bb=/opt/busybox
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev 2>/dev/null
+mount -t tmpfs tmpfs /tmp
+mount -t tmpfs tmpfs /run
+uptime() { cut -d' ' -f1 /proc/uptime; }
+
+# ---- data disk
+mkdir -p /data
+if [ -b /dev/vdb ]; then
+    if ! blkid -p /dev/vdb >/dev/null 2>&1; then
+        echo "== ruwebos: formatting the empty data disk /dev/vdb"
+        mkfs.ext4 -q -L ruwebos-data /dev/vdb
+    fi
+    if ! mount -t ext4 -o noatime /dev/vdb /data; then
+        e2fsck -p /dev/vdb
+        mount -t ext4 -o noatime /dev/vdb /data || echo "== ruwebos: WARNING cannot mount /dev/vdb; data is NOT kept"
+    fi
+else
+    echo "== ruwebos: WARNING no data disk (second -drive); data is NOT kept"
+fi
+mountpoint -q /data || mount -t tmpfs tmpfs /data
+mkdir -p /data/rucloud /data/log
+[ -f /data/log/rucloud.log ] && mv /data/log/rucloud.log /data/log/rucloud.log.1
+echo $(( $(cat /data/log/boots 2>/dev/null || echo 0) + 1 )) > /data/log/boots
+
+# ---- network (ruvm -nic user: guest 10.0.2.15, gateway 10.0.2.2, DNS 10.0.2.3)
+$bb ifconfig lo 127.0.0.1 up
+$bb ifconfig eth0 10.0.2.15 netmask 255.255.255.0 up
+$bb route add default gw 10.0.2.2
+echo "nameserver 10.0.2.3" > /etc/resolv.conf
+echo ruwebos > /proc/sys/kernel/hostname
+
+. /etc/os-release
+echo "== ruwebos: $PRETTY_NAME, $(uname -r), $(nproc) CPUs, node $(node --version), $(rucloud --version 2>&1), boot #$(cat /data/log/boots), $(uptime) s"
+
+# ---- rucloud under a watchdog: restarted 1 s after it exits, unless we are shutting down
+cd /opt/ruwebos
+(
+    while [ ! -e /run/stopping ]; do
+        rucloud serve /opt/ruwebos/rucloud.toml >>/data/log/rucloud.log 2>&1 &
+        echo $! > /run/rucloud.pid
+        wait $!
+        status=$?
+        [ -e /run/stopping ] && break
+        echo "== ruwebos: rucloud exited with $status at $(uptime) s; restarting (log: /data/log/rucloud.log)"
+        sleep 1
+    done
+) &
+
+i=0
+until $bb wget -q -O /dev/null http://127.0.0.1:8700/ 2>/dev/null; do
+    i=$((i + 1))
+    if [ $i -ge 600 ]; then
+        echo "== ruwebos: rucloud is not answering; last log lines:"
+        tail -n 20 /data/log/rucloud.log
+        break
+    fi
+    sleep 0.05
+done
+[ $i -lt 600 ] && echo "RUWEBOS-READY $(uptime) s"
+
+# ---- console commands
+shutdown() {
+    echo "== ruwebos: stopping"
+    touch /run/stopping
+    pid=$(cat /run/rucloud.pid 2>/dev/null)
+    if [ -n "$pid" ]; then
+        kill -TERM "$pid" 2>/dev/null
+        i=0
+        while kill -0 "$pid" 2>/dev/null && [ $i -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
+    fi
+    sync
+    umount /data 2>/dev/null || { mount -o remount,ro /data; sync; }
+    echo "== ruwebos: powered off after $(uptime) s"
+    $bb poweroff -f
+}
+while read -r cmd; do
+    case "$cmd" in
+        poweroff) shutdown ;;
+        status) echo "== ruwebos: up $(uptime) s, rucloud pid $(cat /run/rucloud.pid)" ;;
+        crash-rucloud) kill -KILL "$(cat /run/rucloud.pid)" ;; # tests the watchdog
+        "") ;;
+        *) echo "== ruwebos: unknown command '$cmd' (poweroff, status, crash-rucloud)" ;;
+    esac
+done
+exec sleep infinity

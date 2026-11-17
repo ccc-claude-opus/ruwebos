@@ -1,0 +1,122 @@
+#!/bin/sh
+# ruwebos launcher: boots the system in ruvm and opens rubrowser on this machine at the home screen.
+#   ./ruwebos                       boot, open rubrowser; closing rubrowser (or Ctrl-C) powers the system off
+#   ./ruwebos --headless            boot and keep running until Ctrl-C (use any browser on http://localhost:8700/)
+#   ./ruwebos --screenshot home.png boot, render the home screen with rubrowser to a PNG, power off
+#   ./ruwebos --accel tcg [url]     force an accelerator (default: hvf on macOS/arm64, kvm on Linux/aarch64, else tcg)
+# Uses ../ruvm and ../rubrowser (or RUVM=..., RUBROWSER=... checkouts, or RUBROWSER_BIN=<binary>).
+# The system disk out/system.ext4 is built by image/build.sh on first use; the data disk out/data.ext4
+# (DATA_SIZE, default 512m) is created empty and formatted by the system on first boot.
+set -e
+cd "$(dirname "$0")"
+now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
+since() { perl -e "printf '%.2f', $(now) - $1"; }
+t0=$(now)
+
+accel= mode=window shot= url=http://localhost:8700/
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --accel | -accel) accel=$2; shift ;;
+        --headless) mode=headless ;;
+        --screenshot) mode=screenshot shot=$2; shift ;;
+        -h | --help) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -*) echo "ruwebos: unknown option $1" >&2; exit 2 ;;
+        *) url=$1 ;;
+    esac
+    shift
+done
+if [ -z "$accel" ]; then
+    case "$(uname -s)-$(uname -m)" in
+        Darwin-arm64) accel=hvf ;;
+        Linux-aarch64) if [ -w /dev/kvm ]; then accel=kvm; else accel=tcg; fi ;;
+        *) accel=tcg ;;
+    esac
+fi
+
+ruvm_dir=${RUVM:-../ruvm}
+ruvm=$ruvm_dir/target/release/ruvm
+[ -x "$ruvm" ] || { echo "ruwebos: $ruvm not found; build it (cargo build --release in $ruvm_dir)" >&2; exit 1; }
+if [ "$mode" != headless ]; then
+    rb_dir=${RUBROWSER:-../rubrowser}
+    rubrowser=${RUBROWSER_BIN:-}
+    for b in "$rb_dir/target/release/rubrowser" "$rb_dir/target/debug/rubrowser" "$(command -v rubrowser || true)"; do
+        [ -z "$rubrowser" ] && [ -x "$b" ] && rubrowser=$b
+    done
+    [ -n "$rubrowser" ] || { echo "ruwebos: rubrowser not found; build it (cargo build in $rb_dir) or set RUBROWSER_BIN" >&2; exit 1; }
+fi
+[ -f out/system.ext4 ] || image/build.sh
+[ -f out/data.ext4 ] || dd if=/dev/zero of=out/data.ext4 bs=1 count=0 seek="${DATA_SIZE:-512m}" 2>/dev/null
+if curl -s -o /dev/null --max-time 1 http://127.0.0.1:8700/; then
+    echo "ruwebos: port 8700 is already in use (is ruwebos already running?)" >&2
+    exit 1
+fi
+
+run=out/run
+mkdir -p $run
+console=$run/console.in log=$run/console.log
+[ -p $console ] || mkfifo $console
+pid=
+
+boot() {
+    # shellcheck disable=SC2046
+    "$ruvm" -M aarch64 -m 2048 $([ "$1" = tcg ] || echo "-accel $1 -smp 4") \
+        -kernel "$ruvm_dir/tests/guest/out/linux/debian/arm64/linux" \
+        -initrd "$ruvm_dir/tests/guest/out/linux/root/arm64/initramfs.cpio.gz" \
+        -drive file=out/system.ext4,snapshot=on -drive file=out/data.ext4 \
+        -rng -nic user,hostfwd=tcp::8700-:8700 -serial stdio \
+        -append "console=ttyAMA0 rdinit=/init quiet" <$console >$log 2>&1 &
+    pid=$!
+    exec 3>$console # the guest reads its commands (poweroff) from here
+    # ready = the guest says so on the console and the home screen answers through the port forward
+    # (polling with curl alone is slower: the forward accepts before the guest listens)
+    i=0
+    until grep -q RUWEBOS-READY $log && curl -s -o /dev/null --max-time 5 http://127.0.0.1:8700/; do
+        kill -0 $pid 2>/dev/null || return 1
+        i=$((i + 1))
+        [ $i -lt 2400 ] || return 1
+        perl -e 'select(undef, undef, undef, 0.05)'
+    done
+}
+
+poweroff() {
+    trap - INT TERM
+    [ -n "$pid" ] || return 0
+    echo poweroff >&3 2>/dev/null || true
+    i=0
+    while kill -0 $pid 2>/dev/null && [ $i -lt 100 ]; do perl -e 'select(undef, undef, undef, 0.1)'; i=$((i + 1)); done
+    kill -0 $pid 2>/dev/null && kill $pid
+    wait $pid 2>/dev/null || true
+    exec 3>&-
+    pid=
+    grep -h 'powered off' $log || echo "ruwebos: ruvm stopped"
+}
+trap 'poweroff; exit 130' INT TERM
+
+if ! boot "$accel"; then
+    echo "ruwebos: -accel $accel did not boot:" >&2
+    tail -n 5 $log >&2
+    kill $pid 2>/dev/null || true
+    exec 3>&-
+    [ "$accel" != tcg ] || exit 1
+    echo "ruwebos: falling back to -accel tcg" >&2
+    accel=tcg
+    boot tcg || { tail -n 20 $log >&2; exit 1; }
+fi
+grep -h '^== ruwebos' $log || true
+echo "ruwebos: ready after $(since "$t0") s (-accel $accel), $url"
+
+case $mode in
+    headless)
+        echo "ruwebos: Ctrl-C to power off"
+        wait $pid || true
+        ;;
+    screenshot)
+        "$rubrowser" --screenshot "$shot" --width 1280 --height 800 "$url"
+        echo "ruwebos: $shot rendered $(since "$t0") s after the launch"
+        poweroff
+        ;;
+    window)
+        "$rubrowser" "$url" || true
+        poweroff
+        ;;
+esac

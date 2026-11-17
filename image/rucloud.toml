@@ -1,0 +1,58 @@
+# ruwebos 的 rucloud 設定：系統碟的 /opt/ruwebos/rucloud.toml，由 /sbin/init 以 rucloud serve 執行。
+# 應用在系統碟（唯讀，用 -snapshot 掛載），資料在資料碟 /data（D1、KV、R2、Durable Objects）。
+state_dir = "/data/rucloud"
+bind = "0.0.0.0"
+shutdown_timeout = 2
+
+# 所有應用共用的入口，依 Host 分派：http://<應用名稱>.localhost:8700
+# 主機端由 ruvm 的 hostfwd 轉到 127.0.0.1:8700
+[edge]
+port = 8700
+
+# 管理介面只聽 VM 裡的本機；token 自動產生在 /data/rucloud/admin-token
+[admin]
+port = 8799
+
+# app-builder 產生的網站在執行中新增成獨立的應用（http://gen-<專案id>.localhost:8700）
+[dynamic]
+grant = ["app-builder"]
+
+# 主畫面：http://localhost:8700、http://127.0.0.1:8700
+[[app]]
+path = "home"
+hosts = ["localhost", "127.0.0.1"]
+
+[[app]]
+path = "apps/myshop"
+env_file = "apps/myshop/.dev.vars.example"
+d1_init = { DB = "schema.sql" }
+
+[[app]]
+path = "apps/friendbook"
+env_file = "apps/friendbook/.dev.vars.example"
+d1_init = { DB = "schema.sql" }
+
+[[app]]
+path = "apps/markpedia"
+d1_init = { DB = "schema.sql" }
+
+[[app]]
+path = "apps/map"
+d1_init = { DB = "schema.sql" }
+
+[[app]]
+path = "apps/music"
+d1_init = { DB = "schema.sql" }
+
+[[app]]
+path = "apps/app-builder"
+d1_init = { DB = "schema.sql" }
+
+[[app]]
+path = "apps/boardgame"
+
+[[app]]
+path = "sites/webportal"
+
+[[app]]
+path = "sites/ccc"
