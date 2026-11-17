@@ -113,6 +113,7 @@ flowchart TB
 
 1. 階段 2：ruvm 的螢幕與輸入（virtio-gpu 或 ramfb、virtio-input、主機視窗），rubrowser 的 DRM/KMS 或 fbdev 後端加 evdev 輸入；完成後把 rubrowser 的 Linux 版放進系統碟。
 2. 同時在 rubrowser 補階段 3 列出的標準（Pointer / Touch Events、viewport 先做），這些與在哪裡執行無關。
-3. 階段 1 留下的小問題（見 [stage1.md](stage1.md) 的「已知問題」）。
+3. 基本應用（檔案、通訊錄、行事曆、相簿、相機……）：見 [apps.md](apps.md)。
+4. 階段 1 留下的小問題（見 [stage1.md](stage1.md) 的「已知問題」）。
 
 外殼與應用越常見的網頁功能，瀏覽器支援得越好，整個系統就越好用。

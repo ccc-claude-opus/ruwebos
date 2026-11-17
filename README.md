@@ -80,6 +80,7 @@ cd ruwebos && ./ruwebos
 
 * [doc/plan.md](doc/plan.md)：整體規劃與五個階段
 * [doc/stage1.md](doc/stage1.md)：階段 1（一鍵啟動的系統映像）的設計與實測數字
+* [doc/apps.md](doc/apps.md)：基本應用（檔案、通訊錄、相機、相簿……）的規劃
 
 ## 授權
 
