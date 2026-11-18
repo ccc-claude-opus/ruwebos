@@ -11,7 +11,9 @@
 | npm（隨 Node 映像附帶） | 11.19.1 | Artistic-2.0 | /usr/local/lib/node_modules/npm/LICENSE |
 | yarn（隨 Node 映像附帶） | 1.22.22 | BSD-2-Clause | /opt/yarn-v1.22.22/LICENSE |
 | rucloud | 1.7.1 | MIT | https://github.com/ccc-claude-opus/rucloud |
-| 預裝應用 /opt/ruwebos/apps、sites、home | — | MIT（隨 rucloud 與 ruwebos 的 repo 發布；myshop、friendbook、markpedia 取自 test-apps） | /opt/ruwebos |
+| ruwebos 的應用 /opt/ruwebos/apps、home | — | MIT | https://github.com/ccc-claude-opus/ruwebos |
+| rucloud 的範例應用 /opt/ruwebos/examples | — | MIT（隨 rucloud 的 repo 發布；myshop、friendbook、markpedia 取自 test-apps） | https://github.com/ccc-claude-opus/rucloud |
+| Leaflet（地圖應用執行時從 unpkg.com 載入，不在映像裡） | 1.9.4 | BSD-2-Clause | https://leafletjs.com/ |
 | BusyBox /opt/busybox（靜態，來自 ruvm 的 initramfs） | v1.37.0 | GPL-2.0 | https://busybox.net/ |
 | Linux 核心與 initramfs（不在系統碟，由 ruvm 載入） | Debian 13 linux-image-arm64 | GPL-2.0 | https://github.com/ccc-claude-opus/ruvm |
 

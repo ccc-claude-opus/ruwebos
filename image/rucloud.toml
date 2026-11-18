@@ -1,5 +1,7 @@
-# ruwebos 的 rucloud 設定：系統碟的 /opt/ruwebos/rucloud.toml，由 /sbin/init 以 rucloud serve 執行。
-# 應用在系統碟（唯讀，用 -snapshot 掛載），資料在資料碟 /data（D1、KV、R2、Durable Objects）。
+# ruwebos 的 rucloud 設定範本：系統碟的 /opt/ruwebos/rucloud.toml。/sbin/init 開機時把 @ADMIN_TOKEN@ 換成
+# 資料碟上的 token，寫到 /run/ruwebos/rucloud.toml 再以 rucloud serve 執行（所以路徑都用絕對路徑）。
+# 應用在系統碟（唯讀，用 snapshot 掛載），資料在資料碟 /data（D1、KV、R2、Durable Objects）。
+# 主畫面 home/public/index.html 由 image/gen-home.mjs 依這裡的應用產生。
 state_dir = "/data/rucloud"
 bind = "0.0.0.0"
 shutdown_timeout = 2
@@ -9,9 +11,10 @@ shutdown_timeout = 2
 [edge]
 port = 8700
 
-# 管理介面只聽 VM 裡的本機；token 自動產生在 /data/rucloud/admin-token
+# 管理介面只聽 VM 裡的本機；「設定」應用用它列出應用
 [admin]
 port = 8799
+token = "@ADMIN_TOKEN@"
 
 # app-builder 產生的網站在執行中新增成獨立的應用（http://gen-<專案id>.localhost:8700）
 [dynamic]
@@ -19,40 +22,79 @@ grant = ["app-builder"]
 
 # 主畫面：http://localhost:8700、http://127.0.0.1:8700
 [[app]]
-path = "home"
+path = "/opt/ruwebos/home"
 hosts = ["localhost", "127.0.0.1"]
 
+# ---- ruwebos 的基本應用（本 repo 的 apps/；共用 apps/_shared）
 [[app]]
-path = "apps/myshop"
-env_file = "apps/myshop/.dev.vars.example"
+path = "/opt/ruwebos/apps/files"
+allow_read = ["/opt/ruwebos/apps/_shared"]
+
+[[app]]
+path = "/opt/ruwebos/apps/contacts"
+d1_init = { DB = "schema.sql" }
+allow_read = ["/opt/ruwebos/apps/_shared"]
+
+[[app]]
+path = "/opt/ruwebos/apps/calendar"
+d1_init = { DB = "schema.sql" }
+allow_read = ["/opt/ruwebos/apps/_shared"]
+
+[[app]]
+path = "/opt/ruwebos/apps/notes"
+d1_init = { DB = "schema.sql" }
+allow_read = ["/opt/ruwebos/apps/_shared"]
+
+[[app]]
+path = "/opt/ruwebos/apps/todo"
+d1_init = { DB = "schema.sql" }
+allow_read = ["/opt/ruwebos/apps/_shared"]
+
+[[app]]
+path = "/opt/ruwebos/apps/calculator"
+allow_read = ["/opt/ruwebos/apps/_shared"]
+
+[[app]]
+path = "/opt/ruwebos/apps/clock"
+allow_read = ["/opt/ruwebos/apps/_shared"]
+
+[[app]]
+path = "/opt/ruwebos/apps/map"
 d1_init = { DB = "schema.sql" }
 
 [[app]]
-path = "apps/friendbook"
-env_file = "apps/friendbook/.dev.vars.example"
+path = "/opt/ruwebos/apps/settings"
+env_file = "/run/ruwebos/system.env"
+allow_read = ["/opt/ruwebos/apps/_shared"]
+
+# ---- rucloud 的範例應用（rucloud repo 的 apps/、sites/）
+[[app]]
+path = "/opt/ruwebos/examples/apps/myshop"
+env_file = "/opt/ruwebos/examples/apps/myshop/.dev.vars.example"
 d1_init = { DB = "schema.sql" }
 
 [[app]]
-path = "apps/markpedia"
+path = "/opt/ruwebos/examples/apps/friendbook"
+env_file = "/opt/ruwebos/examples/apps/friendbook/.dev.vars.example"
 d1_init = { DB = "schema.sql" }
 
 [[app]]
-path = "apps/map"
+path = "/opt/ruwebos/examples/apps/markpedia"
 d1_init = { DB = "schema.sql" }
 
 [[app]]
-path = "apps/music"
+path = "/opt/ruwebos/examples/apps/music"
 d1_init = { DB = "schema.sql" }
 
 [[app]]
-path = "apps/app-builder"
+path = "/opt/ruwebos/examples/apps/boardgame"
+
+[[app]]
+path = "/opt/ruwebos/examples/apps/app-builder"
 d1_init = { DB = "schema.sql" }
 
 [[app]]
-path = "apps/boardgame"
+path = "/opt/ruwebos/examples/sites/webportal"
 
 [[app]]
-path = "sites/webportal"
-
-[[app]]
-path = "sites/ccc"
+path = "/opt/ruwebos/examples/sites/ccc"

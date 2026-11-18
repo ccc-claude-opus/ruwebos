@@ -43,11 +43,31 @@ echo ruwebos > /proc/sys/kernel/hostname
 . /etc/os-release
 echo "== ruwebos: $PRETTY_NAME, $(uname -r), $(nproc) CPUs, node $(node --version), $(rucloud --version 2>&1), boot #$(cat /data/log/boots), $(uptime) s"
 
+# ---- rucloud's config: the admin token (made on the first boot, kept on the data disk) and the
+# system facts the settings app shows
+mkdir -p /run/ruwebos /data/ruwebos
+[ -s /data/ruwebos/admin-token ] || od -An -tx1 -N24 /dev/urandom | tr -d ' \n' > /data/ruwebos/admin-token
+chmod 600 /data/ruwebos/admin-token
+sed "s/@ADMIN_TOKEN@/$(cat /data/ruwebos/admin-token)/" /opt/ruwebos/rucloud.toml > /run/ruwebos/rucloud.toml
+cat > /run/ruwebos/system.env <<EOF2
+ADMIN_URL=http://127.0.0.1:8799
+ADMIN_TOKEN=$(cat /data/ruwebos/admin-token)
+SYS_OS=$PRETTY_NAME
+SYS_KERNEL=$(uname -r)
+SYS_CPUS=$(nproc)
+SYS_NODE=$(node --version)
+SYS_RUCLOUD=$(rucloud --version 2>&1 | cut -d' ' -f2)
+SYS_BOOT=$(cat /data/log/boots)
+SYS_BOOTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+SYS_DATA=$(df -h /data | awk 'NR==2 { print $3 " 已用，" $4 " 可用（共 " $2 "）" }')
+EOF2
+chmod 600 /run/ruwebos/system.env
+
 # ---- rucloud under a watchdog: restarted 1 s after it exits, unless we are shutting down
 cd /opt/ruwebos
 (
     while [ ! -e /run/stopping ]; do
-        rucloud serve /opt/ruwebos/rucloud.toml >>/data/log/rucloud.log 2>&1 &
+        rucloud serve /run/ruwebos/rucloud.toml >>/data/log/rucloud.log 2>&1 &
         echo $! > /run/rucloud.pid
         wait $!
         status=$?

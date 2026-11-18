@@ -29,7 +29,9 @@ for d in /opt/yarn-*; do
     echo "| yarn（隨 Node 映像附帶） | $v | $l | $d/LICENSE |"
 done
 echo "| rucloud | $(rucloud --version | cut -d' ' -f2) | MIT | https://github.com/ccc-claude-opus/rucloud |"
-echo "| 預裝應用 /opt/ruwebos/apps、sites、home | — | MIT（隨 rucloud 與 ruwebos 的 repo 發布；myshop、friendbook、markpedia 取自 test-apps） | /opt/ruwebos |"
+echo "| ruwebos 的應用 /opt/ruwebos/apps、home | — | MIT | https://github.com/ccc-claude-opus/ruwebos |"
+echo "| rucloud 的範例應用 /opt/ruwebos/examples | — | MIT（隨 rucloud 的 repo 發布；myshop、friendbook、markpedia 取自 test-apps） | https://github.com/ccc-claude-opus/rucloud |"
+echo "| Leaflet（地圖應用執行時從 unpkg.com 載入，不在映像裡） | 1.9.4 | BSD-2-Clause | https://leafletjs.com/ |"
 echo "| BusyBox /opt/busybox（靜態，來自 ruvm 的 initramfs） | $(/opt/busybox | head -1 | cut -d' ' -f2) | GPL-2.0 | https://busybox.net/ |"
 echo "| Linux 核心與 initramfs（不在系統碟，由 ruvm 載入） | Debian 13 linux-image-arm64 | GPL-2.0 | https://github.com/ccc-claude-opus/ruvm |"
 echo

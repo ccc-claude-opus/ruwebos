@@ -1,0 +1,7 @@
+// 計算機：一般與科學運算、角度模式及本機歷史紀錄
+{
+  "name": "calculator",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-16",
+  "assets": { "directory": "./public" }
+}

@@ -1,0 +1,8 @@
+// 備忘錄：Markdown 筆記、資料夾、釘選、搜尋、匯出 .md（D1）
+{
+  "name": "notes",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-16",
+  "assets": { "directory": "./public" },
+  "d1_databases": [{ "binding": "DB", "database_name": "notes", "database_id": "notes" }]
+}

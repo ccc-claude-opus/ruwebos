@@ -1,0 +1,10 @@
+{
+  "name": "通訊錄",
+  "short_name": "通訊錄",
+  "description": "聯絡人、群組與 vCard 匯入匯出",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#1098ad",
+  "background_color": "#f4f4f1",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

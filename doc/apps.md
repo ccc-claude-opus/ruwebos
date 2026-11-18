@@ -4,6 +4,8 @@
 
 這份文件先決定**要做哪些應用、分幾批、各需要什麼**；做法的細節在每一批開工時補上。
 
+**進度**：第 1 批已完成，見 [batch1.md](batch1.md)。
+
 ## 1. 現況盤點
 
 ### rucloud 能提供的（夠用）
@@ -67,7 +69,17 @@
 
 ### 放在哪裡
 
-基本應用放在本 repo 的 `apps/<名稱>/`（rucloud repo 的 `apps/` 是範例與展示用）。`image/build.sh` 把兩邊都裝進系統碟，`image/rucloud.toml` 各加一個 `[[app]]`。
+基本應用放在本 repo 的 `apps/<名稱>/`（rucloud repo 的 `apps/` 是範例與展示用）。`image/build.sh` 把兩邊都裝進系統碟（本 repo 的在 `/opt/ruwebos/apps`，rucloud 的範例在 `/opt/ruwebos/examples`），`image/rucloud.toml` 各加一個 `[[app]]`。
+
+| 共用檔案 | 作用 |
+|---|---|
+| `apps/_shared/lib.js` | 伺服器端：`html` 樣板（自動跳脫）、`page()` 版面、`redirect()`、`readForm()`、時區工具、錯誤頁 |
+| `apps/_shared/markdown.js` | 安全的 Markdown 轉 HTML（備忘錄、檔案預覽、授權清單） |
+| `apps/_shared/ui.css`、`enhance.js` | 共用樣式與漸進增強；`gen.mjs` 把它們包成 `assets.js`，每個應用的 Worker 在自己的網址提供 `/_ui/ui.css`、`/_ui/enhance.js` |
+| `apps/dev.toml` | 在主機上直接跑全部應用（不經 VM）：`rucloud serve $PWD/apps/dev.toml`，主畫面 `http://localhost:8790/` |
+| `apps/test.mjs` | 跑每個應用的 `test.mjs`：`node apps/test.mjs http://localhost:8790`；`./ruwebos --test` 在 VM 裡跑 |
+
+應用用 `import … from '../../_shared/lib.js'` 取用共用程式；rucloud 的沙箱只准讀應用自己的資料夾，所以 `rucloud.toml` 給每個應用 `allow_read = [".../apps/_shared"]`。
 
 ### 應用之間的資料
 
@@ -130,7 +142,7 @@ flowchart LR
 
 ### 測試
 
-每個應用附一個 API 測試（Node 的 `fetch`，在 VM 裡開機後跑），加上 rubrowser 截圖；`./ruwebos` 增加 `--test` 跑全部，記錄每個應用的開啟時間。
+每個應用附一個 API 測試（`apps/<名稱>/test.mjs`，Node 的 `fetch`，在主機上經 hostfwd 打 VM 裡的應用），加上 rubrowser 截圖；`./ruwebos --test` 開機、跑全部、關機。
 
 ## 4. 建議的順序
 

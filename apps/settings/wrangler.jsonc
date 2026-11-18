@@ -1,0 +1,7 @@
+// 設定：系統資訊、已安裝的應用、授權清單（讀 rucloud 的管理埠；系統資訊由 /sbin/init 寫進 env_file）
+{
+  "name": "settings",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-16",
+  "assets": { "directory": "./public", "binding": "ASSETS" }
+}

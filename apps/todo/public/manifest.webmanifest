@@ -1,0 +1,10 @@
+{
+  "name": "待辦",
+  "short_name": "待辦",
+  "description": "任務清單、到期日與重複事項",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#2f9e44",
+  "background_color": "#f4f4f1",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

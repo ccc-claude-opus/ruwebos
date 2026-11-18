@@ -1,0 +1,8 @@
+// 待辦：任務清單、重複事項、到期日與日曆 API（D1）
+{
+  "name": "todo",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-16",
+  "assets": { "directory": "./public" },
+  "d1_databases": [{ "binding": "DB", "database_name": "todo", "database_id": "todo" }]
+}

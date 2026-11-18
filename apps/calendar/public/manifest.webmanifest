@@ -1,0 +1,10 @@
+{
+  "name": "行事曆",
+  "short_name": "行事曆",
+  "description": "月曆、重複行程、生日與待辦，iCalendar 匯入匯出",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#e8590c",
+  "background_color": "#f4f4f1",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

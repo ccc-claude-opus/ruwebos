@@ -1,0 +1,8 @@
+// 檔案：R2 雲端檔案管理、預覽、分享與垃圾桶
+{
+  "name": "files",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-16",
+  "assets": { "directory": "./public" },
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "files" }]
+}

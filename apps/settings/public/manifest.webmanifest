@@ -1,0 +1,10 @@
+{
+  "name": "設定",
+  "short_name": "設定",
+  "description": "系統資訊、應用與授權",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#868e96",
+  "background_color": "#f4f4f1",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

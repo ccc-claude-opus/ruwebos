@@ -1,0 +1,12 @@
+// 行事曆：月曆、一天的行程、重複規則、iCalendar 匯入匯出（D1）；生日與待辦經 service binding 取自通訊錄、待辦
+{
+  "name": "calendar",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-16",
+  "assets": { "directory": "./public" },
+  "d1_databases": [{ "binding": "DB", "database_name": "calendar", "database_id": "calendar" }],
+  "services": [
+    { "binding": "CONTACTS", "service": "contacts" },
+    { "binding": "TODO", "service": "todo" }
+  ]
+}

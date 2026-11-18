@@ -1,0 +1,10 @@
+{
+  "name": "地圖",
+  "short_name": "地圖",
+  "description": "Leaflet 釘選地圖（OpenStreetMap 圖資）",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#10375c",
+  "background_color": "#f4f4f1",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

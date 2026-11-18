@@ -1,0 +1,8 @@
+// 通訊錄：聯絡人、群組、我的最愛、vCard 匯入匯出（D1）；/api/birthdays 給行事曆用
+{
+  "name": "contacts",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-16",
+  "assets": { "directory": "./public" },
+  "d1_databases": [{ "binding": "DB", "database_name": "contacts", "database_id": "contacts" }]
+}

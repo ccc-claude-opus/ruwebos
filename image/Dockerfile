@@ -9,4 +9,5 @@ COPY busybox /opt/busybox
 COPY init /sbin/init
 COPY ruwebos /opt/ruwebos
 COPY licenses.sh crates.txt /usr/share/doc/ruwebos/
-RUN sh /usr/share/doc/ruwebos/licenses.sh > /usr/share/doc/ruwebos/licenses.md
+RUN sh /usr/share/doc/ruwebos/licenses.sh > /usr/share/doc/ruwebos/licenses.md \
+    && cp /usr/share/doc/ruwebos/licenses.md /opt/ruwebos/apps/settings/public/licenses.md

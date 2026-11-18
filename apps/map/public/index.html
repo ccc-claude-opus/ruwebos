@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>地圖</title>
+<meta name="theme-color" content="#10375c">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="/style.css">
+<div id="app">
+  <header>
+    <h1><a class="home" href="http://localhost:8700/" title="主畫面" aria-label="主畫面">⌂</a> 地圖</h1>
+    <p>點地圖新增釘選，資料存在 D1。<span id="stats"></span></p>
+  </header>
+  <main>
+    <div id="map"></div>
+    <aside>
+      <h2>釘選列表</h2>
+      <ul id="list"></ul>
+      <p class="hint"><a href="https://leafletjs.com/" target="_blank">Leaflet</a> + OpenStreetMap 圖資</p>
+    </aside>
+  </main>
+</div>
+<script>
+  // 主畫面在同一個 edge 埠的 localhost
+  document.querySelector('.home').href = location.protocol + '//localhost' + (location.port ? ':' + location.port : '') + '/';
+</script>
+<div id="form" class="hidden">
+  <h3>新釘選 <span id="form-coord"></span></h3>
+  <input id="title" placeholder="名稱（必填）" maxlength="100">
+  <textarea id="note" placeholder="備註（選填）" maxlength="500" rows="2"></textarea>
+  <div>
+    <button id="save">儲存</button>
+    <button id="cancel" class="ghost">取消</button>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/app.js"></script>

@@ -64,10 +64,27 @@ cd ruwebos && ./ruwebos
 | `./ruwebos` | 開機並開啟 rubrowser 到主畫面 `http://localhost:8700/` |
 | `./ruwebos --headless` | 只開機，用任何瀏覽器開 `http://localhost:8700/`，Ctrl-C 關機 |
 | `./ruwebos --screenshot home.png [網址]` | 開機、用 rubrowser 截圖、關機 |
+| `./ruwebos --test` | 開機、跑每個應用的測試（`apps/*/test.mjs`）、關機 |
 | `./ruwebos --accel tcg` | 指定加速器（預設依序 hvf → kvm → tcg） |
 | `image/build.sh` | 重建系統碟 `out/system.ext4`（資料碟 `out/data.ext4` 不受影響） |
 
-應用的網址是 `http://<名稱>.localhost:8700/`：myshop、friendbook、markpedia、map、music、boardgame、app-builder、webportal、ccc。
+應用的網址是 `http://<名稱>.localhost:8700/`。
+
+| 基本應用（本 repo 的 `apps/`） | |
+|---|---|
+| 檔案 `files` | 資料夾、上傳、預覽、垃圾桶 |
+| 通訊錄 `contacts` | 群組、我的最愛、vCard 匯入匯出 |
+| 行事曆 `calendar` | 月曆、重複行程、生日與待辦、iCalendar 匯入匯出 |
+| 備忘錄 `notes` | Markdown、資料夾、搜尋 |
+| 待辦 `todo` | 清單、期限、重複事項 |
+| 計算機 `calculator` | 一般與科學運算 |
+| 時鐘 `clock` | 世界時鐘、鬧鐘、碼錶、計時器 |
+| 地圖 `map` | 釘選地圖（Leaflet + OpenStreetMap） |
+| 設定 `settings` | 系統資訊、應用、授權清單 |
+
+另外預裝 rucloud 的範例應用：myshop、friendbook、markpedia、music、boardgame、app-builder、webportal、ccc。
+
+![第 1 批基本應用](doc/apps.png)
 
 ## 系統碟與資料碟
 
@@ -81,6 +98,9 @@ cd ruwebos && ./ruwebos
 * [doc/plan.md](doc/plan.md)：整體規劃與五個階段
 * [doc/stage1.md](doc/stage1.md)：階段 1（一鍵啟動的系統映像）的設計與實測數字
 * [doc/apps.md](doc/apps.md)：基本應用（檔案、通訊錄、相機、相簿……）的規劃
+* [doc/batch1.md](doc/batch1.md)：第 1 批基本應用的功能、標準與實測結果
+
+開發應用時可以不經 VM，直接在主機上跑：`rucloud serve $PWD/apps/dev.toml`（主畫面 `http://localhost:8790/`），測試用 `node apps/test.mjs http://localhost:8790`。
 
 ## 授權
 

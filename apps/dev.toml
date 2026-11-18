@@ -1,0 +1,63 @@
+# 在主機上直接跑 ruwebos 的應用（開發用，不經 VM）：
+#   rucloud serve $PWD/apps/dev.toml      （設定檔要用絕對路徑，allow_read 才會對）
+#   node apps/test.mjs http://localhost:8790
+# 主畫面 http://localhost:8790/，應用 http://<名稱>.localhost:8790/；資料在 out/dev-state。
+state_dir = "../out/dev-state"
+shutdown_timeout = 1
+# 主機的 Node 25 在權限模式下還要 --allow-net，rucloud 尚未支援；開發時每個應用都 sandbox = false（VM 裡的 Node 24 照常開）
+
+[edge]
+port = 8790
+
+[[app]]
+path = "../home"
+hosts = ["localhost", "127.0.0.1"]
+
+[[app]]
+path = "files"
+allow_read = ["_shared"]
+sandbox = false
+
+[[app]]
+path = "contacts"
+d1_init = { DB = "schema.sql" }
+allow_read = ["_shared"]
+sandbox = false
+
+[[app]]
+path = "calendar"
+d1_init = { DB = "schema.sql" }
+allow_read = ["_shared"]
+sandbox = false
+
+[[app]]
+path = "notes"
+d1_init = { DB = "schema.sql" }
+allow_read = ["_shared"]
+sandbox = false
+
+[[app]]
+path = "todo"
+d1_init = { DB = "schema.sql" }
+allow_read = ["_shared"]
+sandbox = false
+
+[[app]]
+path = "calculator"
+allow_read = ["_shared"]
+sandbox = false
+
+[[app]]
+path = "clock"
+allow_read = ["_shared"]
+sandbox = false
+
+[[app]]
+path = "map"
+d1_init = { DB = "schema.sql" }
+sandbox = false
+
+[[app]]
+path = "settings"
+allow_read = ["_shared"]
+sandbox = false

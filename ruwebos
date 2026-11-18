@@ -3,6 +3,7 @@
 #   ./ruwebos                       boot, open rubrowser; closing rubrowser (or Ctrl-C) powers the system off
 #   ./ruwebos --headless            boot and keep running until Ctrl-C (use any browser on http://localhost:8700/)
 #   ./ruwebos --screenshot home.png boot, render the home screen with rubrowser to a PNG, power off
+#   ./ruwebos --test                boot, run every app's test (apps/*/test.mjs) through the port forward, power off
 #   ./ruwebos --accel tcg [url]     force an accelerator (default: hvf on macOS/arm64, kvm on Linux/aarch64, else tcg)
 # Uses ../ruvm and ../rubrowser (or RUVM=..., RUBROWSER=... checkouts, or RUBROWSER_BIN=<binary>).
 # The system disk out/system.ext4 is built by image/build.sh on first use; the data disk out/data.ext4
@@ -19,7 +20,8 @@ while [ $# -gt 0 ]; do
         --accel | -accel) accel=$2; shift ;;
         --headless) mode=headless ;;
         --screenshot) mode=screenshot shot=$2; shift ;;
-        -h | --help) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --test) mode=test ;;
+        -h | --help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) echo "ruwebos: unknown option $1" >&2; exit 2 ;;
         *) url=$1 ;;
     esac
@@ -36,7 +38,7 @@ fi
 ruvm_dir=${RUVM:-../ruvm}
 ruvm=$ruvm_dir/target/release/ruvm
 [ -x "$ruvm" ] || { echo "ruwebos: $ruvm not found; build it (cargo build --release in $ruvm_dir)" >&2; exit 1; }
-if [ "$mode" != headless ]; then
+if [ "$mode" = window ] || [ "$mode" = screenshot ]; then
     rb_dir=${RUBROWSER:-../rubrowser}
     rubrowser=${RUBROWSER_BIN:-}
     for b in "$rb_dir/target/release/rubrowser" "$rb_dir/target/debug/rubrowser" "$(command -v rubrowser || true)"; do
@@ -118,5 +120,11 @@ case $mode in
     window)
         "$rubrowser" "$url" || true
         poweroff
+        ;;
+    test)
+        status=0
+        node apps/test.mjs http://localhost:8700 || status=$?
+        poweroff
+        exit $status
         ;;
 esac

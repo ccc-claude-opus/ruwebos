@@ -1,0 +1,8 @@
+// 時鐘：世界時鐘、頁面鬧鐘、碼錶與計時器（KV）
+{
+  "name": "clock",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-16",
+  "assets": { "directory": "./public" },
+  "kv_namespaces": [{ "binding": "KV", "id": "clock" }]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "計算機",
+  "short_name": "計算機",
+  "description": "一般與科學運算、角度模式及本機歷史紀錄",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#495057",
+  "background_color": "#f4f4f1",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
