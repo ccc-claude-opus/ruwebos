@@ -1,5 +1,6 @@
 // 設定：系統資訊、已安裝的應用、授權清單。
 //   GET /           系統（版本、資料碟、時區）
+//   GET /network    網路：介面、位址、閘道、DNS（由 /sbin/init 寫入），以及現在能不能連到網際網路
 //   GET /apps       應用清單（rucloud 管理埠的 /apps 與 /stats）
 //   GET /licenses   映像裡每個套件的授權（建置時產生的 public/licenses.md）
 // 系統資訊與管理埠的網址、token 由 /sbin/init 寫進 env_file（SYS_*、ADMIN_URL、ADMIN_TOKEN）；
@@ -12,6 +13,7 @@ const APP = { name: '設定', color: '#868e96' };
 const tabs = (url) =>
   html`<p class="row">${[
     ['/', '系統'],
+    ['/network', '網路'],
     ['/apps', '應用'],
     ['/licenses', '授權'],
   ].map(([href, label]) => html`<a class="chip${url.pathname === href ? ' on' : ''}" href="${href}">${label}</a>`)}</p>`;
@@ -51,6 +53,46 @@ ${dev ? html`<p class="muted">（直接在主機上執行，沒有系統資訊�
 <h2>關於</h2>
 <p>ruwebos：以瀏覽器為介面的系統。<a href="https://github.com/ccc-claude-opus/ruwebos">原始碼</a> ·
 <a href="${homeUrl(request)}">主畫面</a></p>`,
+  });
+}
+
+// 對外連線：連一個中立的網站（Debian 的套件鏡像），5 秒逾時
+async function reach(target) {
+  const t0 = Date.now();
+  try {
+    const r = await fetch(target, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(5000) });
+    return { ok: true, ms: Date.now() - t0, status: r.status };
+  } catch (e) {
+    return { ok: false, error: e.name === 'TimeoutError' ? '逾時（5 秒）' : e.cause?.code || e.message };
+  }
+}
+
+async function network(request, env, url) {
+  const target = 'https://deb.debian.org/';
+  const r = await reach(target);
+  const dev = !env.SYS_NET_IP;
+  const rows = [
+    ['介面', env.SYS_NET_IF && `${env.SYS_NET_IF}（${env.SYS_NET_DRIVER || 'virtio'}，虛擬的有線網卡）`],
+    ['MAC 位址', env.SYS_NET_MAC],
+    ['IP 位址', env.SYS_NET_IP],
+    ['預設閘道', env.SYS_NET_GW && `${env.SYS_NET_GW}（ruvm 的使用者模式網路，轉送到主機）`],
+    ['DNS', env.SYS_NET_DNS && `${env.SYS_NET_DNS}（ruvm 代為查詢，用主機的 DNS 設定）`],
+  ];
+  return page(request, {
+    app: APP,
+    title: '網路',
+    body: html`${tabs(url)}
+<h2>連線狀態</h2>
+<div class="card row" style="gap:14px"><span style="font-size:32px">${r.ok ? '🟢' : '🔴'}</span>
+<div><strong>${r.ok ? '已連上網際網路' : '無法連上網際網路'}</strong>
+<span class="muted small" style="display:block">${r.ok ? `連到 ${new URL(target).host} 花了 ${r.ms} ms（HTTP ${r.status}）` : `連到 ${new URL(target).host}：${r.error}`}</span></div>
+<a class="btn small" href="/network" style="margin-left:auto">重新檢查</a></div>
+<h2>這部裝置的網路</h2>
+${dev ? html`<p class="muted">（直接在主機上執行，沒有 VM 的網路資訊；在 ruwebos 裡由 /sbin/init 提供。）</p>` : html`<table>${rows.filter(([, v]) => v).map(([k, v]) => html`<tr><th>${k}</th><td>${v}</td></tr>`)}</table>`}
+<h2>Wi-Fi</h2>
+<p>ruwebos 在虛擬機（ruvm）裡執行，看到的是一張虛擬的有線網卡；實際的連線由<strong>主機</strong>提供，主機用 Wi-Fi 或有線網路都可以。
+要切換 Wi-Fi 或連到別的基地台，請在主機的系統設定操作，這裡會跟著主機的連線。</p>
+<p class="muted small">在實體裝置上直接執行 ruwebos 時，才需要無線網卡的驅動與 Wi-Fi 設定（見 ruwebos 的 doc/apps.md）。</p>`,
   });
 }
 
@@ -98,6 +140,7 @@ ${text ? html`<div class="prose">${raw(markdown(text))}</div>` : html`<p class="
 export default app(APP, async (request, env, url) => {
   if (request.method !== 'GET') return null;
   if (url.pathname === '/') return system(request, env, url);
+  if (url.pathname === '/network') return network(request, env, url);
   if (url.pathname === '/apps') return apps(request, env, url);
   if (url.pathname === '/licenses') return licenses(request, env, url);
   return null;
