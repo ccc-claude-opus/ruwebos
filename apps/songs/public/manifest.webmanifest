@@ -1,0 +1,10 @@
+{
+  "name": "音樂",
+  "short_name": "音樂",
+  "description": "歌曲、專輯、演出者與播放清單",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#f76707",
+  "background_color": "#f4f4f1",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

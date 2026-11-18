@@ -42,7 +42,7 @@ git clone https://github.com/ccc-claude-opus/ruwebos
 ```
 
 ```bash
-(cd rubrowser && cargo build)
+(cd rubrowser && cargo build --release)
 ```
 
 下載 Debian 13 的 arm64 核心，並產生 ruvm 的 initramfs（載入 virtio 與 ext4 模組、掛載系統碟）：
@@ -79,6 +79,10 @@ cd ruwebos && ./ruwebos
 | 待辦 `todo` | 清單、期限、重複事項 |
 | 計算機 `calculator` | 一般與科學運算 |
 | 時鐘 `clock` | 世界時鐘、鬧鐘、碼錶、計時器 |
+| 相簿 `photos` | 依拍攝日期整理、EXIF、相簿、最愛 |
+| 音樂 `songs` | 歌曲、專輯、演出者、播放清單、播放器 |
+| 影片 `videos` | 清單、記住看到哪裡 |
+| 天氣 `weather` | 現在、24 小時與一週預報（Open-Meteo） |
 | 地圖 `map` | 釘選地圖（Leaflet + OpenStreetMap） |
 | 設定 `settings` | 系統資訊、應用、授權清單 |
 
@@ -86,10 +90,13 @@ cd ruwebos && ./ruwebos
 
 ![第 1 批基本應用](doc/apps.png)
 
+![第 2 批基本應用](doc/apps2.png)
+
 ## 系統碟與資料碟
 
 * `out/system.ext4`：Debian 13 + Node 24 + rucloud + 預裝應用 + init，唯讀（開機時以 snapshot 掛載），更新時整顆替換。
 * `out/data.ext4`：rucloud 的資料（每個應用的 D1、KV、R2），重開機後還在；第一次開機時自動格式化。
+* 系統時區取自主機（啟動器經核心命令列傳入）。
 
 映像裡每個套件的授權列在 [doc/licenses.md](doc/licenses.md)（由 `image/build.sh` 產生）。
 
@@ -98,7 +105,7 @@ cd ruwebos && ./ruwebos
 * [doc/plan.md](doc/plan.md)：整體規劃與五個階段
 * [doc/stage1.md](doc/stage1.md)：階段 1（一鍵啟動的系統映像）的設計與實測數字
 * [doc/apps.md](doc/apps.md)：基本應用（檔案、通訊錄、相機、相簿……）的規劃
-* [doc/batch1.md](doc/batch1.md)：第 1 批基本應用的功能、標準與實測結果
+* [doc/batch1.md](doc/batch1.md)、[doc/batch2.md](doc/batch2.md)：第 1、2 批基本應用的功能、標準與實測結果
 
 開發應用時可以不經 VM，直接在主機上跑：`rucloud serve $PWD/apps/dev.toml`（主畫面 `http://localhost:8790/`），測試用 `node apps/test.mjs http://localhost:8790`。
 

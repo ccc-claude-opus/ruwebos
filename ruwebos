@@ -53,6 +53,10 @@ if curl -s -o /dev/null --max-time 1 http://127.0.0.1:8700/; then
     exit 1
 fi
 
+# the host's time zone becomes the system's (the apps show times in it)
+tz=${TZ:-$(readlink /etc/localtime 2>/dev/null | sed -n 's|.*zoneinfo/||p')}
+case $tz in *[!A-Za-z0-9_/+-]* | "") tz=UTC ;; esac
+
 run=out/run
 mkdir -p $run
 console=$run/console.in log=$run/console.log
@@ -66,7 +70,7 @@ boot() {
         -initrd "$ruvm_dir/tests/guest/out/linux/root/arm64/initramfs.cpio.gz" \
         -drive file=out/system.ext4,snapshot=on -drive file=out/data.ext4 \
         -rng -nic user,hostfwd=tcp::8700-:8700 -serial stdio \
-        -append "console=ttyAMA0 rdinit=/init quiet" <$console >$log 2>&1 &
+        -append "console=ttyAMA0 rdinit=/init quiet ruwebos.tz=$tz" <$console >$log 2>&1 &
     pid=$!
     exec 3>$console # the guest reads its commands (poweroff) from here
     # ready = the guest says so on the console and the home screen answers through the port forward

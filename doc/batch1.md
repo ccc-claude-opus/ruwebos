@@ -47,8 +47,8 @@
 
 ## 已知問題與後續
 
-* **rubrowser 的時區**：rubrowser 的 `Intl` 回報 UTC、也不支援 `timeZone` 選項與中文語系，所以在 rubrowser 裡行事曆與備忘錄的時間顯示成 UTC。應用照標準取得時區；要在 rubrowser 補 ECMA-402 的時區（`Intl.DateTimeFormat().resolvedOptions().timeZone` 回報主機時區、`timeZone` 選項）。
-* **rubrowser 的 `table-layout: fixed`** 欄寬不對；行事曆的月曆因此改用 CSS grid。
+* ~~rubrowser 的時區~~：已在第 2 批解決（rubrowser 補了 `Intl` 時區，ruwebos 加了系統時區，見 [batch2.md](batch2.md)）。
+* ~~rubrowser 的 `table-layout: fixed`~~：已在 rubrowser 補上；行事曆的月曆維持 CSS grid。
 * **rubrowser debug 版**只要頁面有 `<script>`，載入 JS 執行環境就要 15～20 秒；release 版約 1.5～3 秒。
 * **檔案上傳、匯入 vCard／iCalendar 檔**要等 rubrowser 支援 `<input type="file">` 與 multipart（另一個 session 進行中）；貼上文字的匯入現在就能用，測試用 Node 的 `fetch` 驗證了 multipart 上傳。
 * **rucloud 與 Node 25**：主機上的 Node 25 在權限模式下還要 `--allow-net`，rucloud 尚未支援，所以 `apps/dev.toml` 關掉沙箱；VM 裡的 Node 24 不受影響。

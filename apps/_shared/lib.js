@@ -96,10 +96,10 @@ export function shared(url) {
   return new Response(a.body, { headers: { 'content-type': a.type, 'cache-control': 'public, max-age=300' } });
 }
 
-/** The viewer's time zone: the `tz` cookie set by enhance.js, else UTC. */
+/** The viewer's time zone: the `tz` cookie set by enhance.js, else the system's (TZ, set by /sbin/init), else UTC. */
 export function tzOf(request) {
   const m = /(?:^|;\s*)tz=([^;]+)/.exec(request.headers.get('cookie') || '');
-  const tz = m ? decodeURIComponent(m[1]) : 'UTC';
+  const tz = m ? decodeURIComponent(m[1]) : Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   try {
     new Intl.DateTimeFormat('en', { timeZone: tz });
     return tz;

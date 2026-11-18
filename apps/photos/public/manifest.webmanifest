@@ -1,0 +1,10 @@
+{
+  "name": "相簿",
+  "short_name": "相簿",
+  "description": "照片、相簿與最愛，依拍攝日期整理",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#d6336c",
+  "background_color": "#f4f4f1",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

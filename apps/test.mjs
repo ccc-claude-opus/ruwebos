@@ -23,7 +23,8 @@ function client(name) {
   });
   const timed = async (path, opts = {}) => {
     const t0 = performance.now();
-    const r = await fetch(base + path, { redirect: 'manual', ...opts });
+    // a fixed time zone, so results do not depend on the system's
+    const r = await fetch(base + path, { redirect: 'manual', ...opts, headers: { cookie: 'tz=UTC', ...(opts.headers || {}) } });
     return res(r, performance.now() - t0);
   };
   const t = {

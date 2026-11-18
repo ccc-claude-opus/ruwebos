@@ -12,6 +12,12 @@ mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev 2>/dev/null
 mount -t tmpfs tmpfs /tmp
 mount -t tmpfs tmpfs /run
+# the system's time zone from the launcher (ruwebos.tz=Area/City on the kernel command line); Node has its own tz data
+for arg in $(cat /proc/cmdline); do
+    case $arg in ruwebos.tz=*) TZ=${arg#ruwebos.tz=} ;; esac
+done
+case $TZ in *[!A-Za-z0-9_/+-]* | "") TZ=UTC ;; esac
+export TZ
 uptime() { cut -d' ' -f1 /proc/uptime; }
 
 # ---- data disk
@@ -59,6 +65,7 @@ SYS_NODE=$(node --version)
 SYS_RUCLOUD=$(rucloud --version 2>&1 | cut -d' ' -f2)
 SYS_BOOT=$(cat /data/log/boots)
 SYS_BOOTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+SYS_TZ=$TZ
 SYS_DATA=$(df -h /data | awk 'NR==2 { print $3 " 已用，" $4 " 可用（共 " $2 "）" }')
 EOF2
 chmod 600 /run/ruwebos/system.env

@@ -1,0 +1,8 @@
+// 天氣：現在、24 小時與一週預報（資料來自 Open-Meteo，CC BY 4.0）；城市清單與預報快取放 KV
+{
+  "name": "weather",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-16",
+  "assets": { "directory": "./public" },
+  "kv_namespaces": [{ "binding": "KV", "id": "weather" }]
+}

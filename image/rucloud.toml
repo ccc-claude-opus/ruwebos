@@ -59,6 +59,25 @@ path = "/opt/ruwebos/apps/clock"
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
+path = "/opt/ruwebos/apps/photos"
+d1_init = { DB = "schema.sql" }
+allow_read = ["/opt/ruwebos/apps/_shared"]
+
+[[app]]
+path = "/opt/ruwebos/apps/songs"
+d1_init = { DB = "schema.sql" }
+allow_read = ["/opt/ruwebos/apps/_shared"]
+
+[[app]]
+path = "/opt/ruwebos/apps/videos"
+d1_init = { DB = "schema.sql" }
+allow_read = ["/opt/ruwebos/apps/_shared"]
+
+[[app]]
+path = "/opt/ruwebos/apps/weather"
+allow_read = ["/opt/ruwebos/apps/_shared"]
+
+[[app]]
 path = "/opt/ruwebos/apps/map"
 d1_init = { DB = "schema.sql" }
 

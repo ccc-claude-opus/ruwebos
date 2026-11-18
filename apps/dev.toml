@@ -61,3 +61,26 @@ sandbox = false
 path = "settings"
 allow_read = ["_shared"]
 sandbox = false
+
+[[app]]
+path = "photos"
+d1_init = { DB = "schema.sql" }
+allow_read = ["_shared"]
+sandbox = false
+
+[[app]]
+path = "songs"
+d1_init = { DB = "schema.sql" }
+allow_read = ["_shared"]
+sandbox = false
+
+[[app]]
+path = "videos"
+d1_init = { DB = "schema.sql" }
+allow_read = ["_shared"]
+sandbox = false
+
+[[app]]
+path = "weather"
+allow_read = ["_shared"]
+sandbox = false

@@ -1,0 +1,10 @@
+// 相簿：照片（R2 放原檔與縮圖）、EXIF、依月份分組、最愛、相簿（D1）；可從「檔案」應用加入照片（service binding）
+{
+  "name": "photos",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-16",
+  "assets": { "directory": "./public" },
+  "d1_databases": [{ "binding": "DB", "database_name": "photos", "database_id": "photos" }],
+  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "photos" }],
+  "services": [{ "binding": "FILESAPP", "service": "files" }]
+}

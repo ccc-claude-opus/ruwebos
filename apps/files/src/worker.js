@@ -7,6 +7,7 @@
 //   GET  /api/list?dir=        給其他應用的 JSON
 import { app, page, html, raw, redirect, readForm, json, tzOf, fmt, UserError } from '../../_shared/lib.js';
 import { markdown } from '../../_shared/markdown.js';
+import { serveObject, filesOf, size } from '../../_shared/r2.js';
 
 const APP = { name: '檔案', color: '#5c7cfa' };
 const TRASH = '.trash/';
@@ -32,17 +33,6 @@ const baseName = (path) => path.replace(/\/$/, '').split('/').pop();
 const parentOf = (path) => path.replace(/\/$/, '').split('/').slice(0, -1).map((s) => s + '/').join('');
 const enc = (path) => path.split('/').map(encodeURIComponent).join('/');
 const folderUrl = (dir) => (dir ? `/d/${enc(dir)}` : '/');
-
-function size(n) {
-  if (n < 1024) return `${n} B`;
-  const u = ['KB', 'MB', 'GB', 'TB'];
-  let i = -1;
-  do {
-    n /= 1024;
-    i++;
-  } while (n >= 1024 && i < u.length - 1);
-  return `${n < 10 ? n.toFixed(1) : Math.round(n)} ${u[i]}`;
-}
 
 function checkName(name) {
   name = String(name ?? '').trim();
@@ -201,7 +191,7 @@ async function filePage(request, env, path) {
       preview = ext(name) === 'md' ? html`<div class="card prose">${raw(markdown(text))}</div>` : html`<pre class="card" style="overflow:auto;white-space:pre-wrap">${text}</pre>`;
     }
   } else if (k === 'image') preview = html`<p><img src="${rawUrl}" alt="${name}" style="max-width:100%"></p>`;
-  else if (k === 'audio') preview = html`<p><audio controls src="${rawUrl}" style="width:100%"></audio></p>`;
+  else if (k === 'audio') preview = html`<p><audio controls src="${rawUrl}" style="width:100%;height:48px"></audio></p>`;
   else if (k === 'video') preview = html`<p><video controls src="${rawUrl}" style="max-width:100%"></video></p>`;
   else preview = html`<p class="muted">無法預覽這種檔案。</p>`;
   const folders = await allFolders(env.FILES);
@@ -226,43 +216,18 @@ ${preview}
   });
 }
 
-// GET /raw/<路徑>：內容。使用者的 HTML、SVG 一律當純文字送，並加 CSP sandbox，不讓檔案在這個網域執行程式
+// GET /raw/<路徑>：內容。使用者的 HTML、SVG、JavaScript 一律當純文字送，並加 CSP sandbox，不讓檔案在這個網域執行程式
 async function rawFile(request, env, url, path) {
   const head = await env.FILES.head(path);
   if (!head) return new Response('找不到這個檔案', { status: 404 });
   let type = head.httpMetadata?.contentType || guess(path);
   if (/^(text\/html|image\/svg\+xml|application\/xhtml\+xml|text\/xml|application\/xml|text\/javascript|application\/javascript)/i.test(type) || /\.(html?|svg|xht(ml)?|xml|js|mjs)$/i.test(path)) type = 'text/plain; charset=utf-8';
   else if (type.startsWith('text/') && !/charset/i.test(type)) type += '; charset=utf-8';
-  const headers = {
-    'content-type': type,
-    'etag': `"${head.etag}"`,
-    'last-modified': new Date(head.uploaded).toUTCString(),
-    'accept-ranges': 'bytes',
-    'x-content-type-options': 'nosniff',
-    'content-security-policy': 'sandbox',
-  };
-  if (url.searchParams.get('download')) {
-    const name = baseName(path);
-    headers['content-disposition'] = `attachment; filename="${name.replace(/[^\x20-\x7e]|["\\]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(name)}`;
-  }
-  // RFC 9110 14.2：只處理單一範圍
-  const m = /^bytes=(\d*)-(\d*)$/.exec(request.headers.get('range') || '');
-  if (m && (m[1] || m[2])) {
-    const total = head.size;
-    let start, end;
-    if (m[1]) {
-      start = +m[1];
-      end = m[2] ? Math.min(+m[2], total - 1) : total - 1;
-    } else {
-      start = Math.max(0, total - +m[2]);
-      end = total - 1;
-    }
-    if (start >= total || end < start) return new Response(null, { status: 416, headers: { 'content-range': `bytes */${total}` } });
-    const o = await env.FILES.get(path, { range: { offset: start, length: end - start + 1 } });
-    return new Response(o.body, { status: 206, headers: { ...headers, 'content-range': `bytes ${start}-${end}/${total}`, 'content-length': String(end - start + 1) } });
-  }
-  const o = await env.FILES.get(path);
-  return new Response(o.body, { headers: { ...headers, 'content-length': String(head.size) } });
+  return serveObject(request, env.FILES, path, {
+    type,
+    download: url.searchParams.get('download') ? baseName(path) : undefined,
+    headers: { 'x-content-type-options': 'nosniff', 'content-security-policy': 'sandbox' },
+  });
 }
 
 async function trashPage(request, env) {
@@ -305,7 +270,7 @@ async function act(request, env, url) {
   const b = env.FILES;
   if (p === '/upload') {
     const dir = checkDir(f.dir);
-    const files = [].concat(f.file || []).filter((x) => x && typeof x === 'object' && x.name);
+    const files = filesOf(f.file);
     if (!files.length) throw new UserError('沒有選擇檔案。');
     for (const file of files) {
       if (file.size > MAX_UPLOAD) throw new UserError(`「${file.name}」太大了（上限 100 MB）。`);

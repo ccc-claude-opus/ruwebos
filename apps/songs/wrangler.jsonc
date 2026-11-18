@@ -1,0 +1,9 @@
+// 音樂：音檔與封面（R2）、曲目與播放清單（D1）；讀 MP3、FLAC、M4A 的標籤，依序播放
+{
+  "name": "songs",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-16",
+  "assets": { "directory": "./public" },
+  "d1_databases": [{ "binding": "DB", "database_name": "songs", "database_id": "songs" }],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "songs" }]
+}

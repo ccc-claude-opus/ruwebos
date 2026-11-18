@@ -44,7 +44,7 @@ ${dev ? html`<p class="muted">（直接在主機上執行，沒有系統資訊�
 <table>${rows.filter(([, v]) => v).map(([k, v]) => html`<tr><th>${k}</th><td>${v}</td></tr>`)}</table>
 <h2>外觀與地區</h2>
 <table>
-  <tr><th>時區</th><td>${tz}（取自瀏覽器）</td></tr>
+  <tr><th>時區</th><td>${tz}${env.SYS_TZ ? `（系統時區 ${env.SYS_TZ}，開機時取自主機）` : ''}</td></tr>
   <tr><th>現在時間</th><td>${fmt(new Date(), tz, { dateStyle: 'full', timeStyle: 'medium' })}</td></tr>
   <tr><th>深色模式</th><td>跟隨瀏覽器與作業系統（prefers-color-scheme）</td></tr>
 </table>

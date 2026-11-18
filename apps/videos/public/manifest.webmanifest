@@ -1,0 +1,10 @@
+{
+  "name": "影片",
+  "short_name": "影片",
+  "description": "影片清單，記住看到哪裡",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#7048e8",
+  "background_color": "#f4f4f1",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
