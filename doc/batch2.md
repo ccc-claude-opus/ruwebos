@@ -57,7 +57,7 @@ rubrowser 的 `document.cookie` 只存在頁面裡、不會送到伺服器，所
 
 授權：ruwebos 沒有包含或連結 FFmpeg；有影音功能的 rubrowser 連結機器上的 FFmpeg，散布那樣的執行檔時要遵守該 FFmpeg 的授權（見 README 的「授權」）。
 
-## 地圖的底圖、文字選取與右鍵選單（rubrowser）
+## 試用時發現的問題（rubrowser）
 
 試用時發現的問題，都在 rubrowser 依標準修正：
 
@@ -66,6 +66,11 @@ rubrowser 的 `document.cookie` 只存在頁面裡、不會送到伺服器，所
 | 地圖只有灰底與標記 | ① rubrowser 沒有對 `<img>` 送 `load`／`error` 事件，Leaflet 等不到圖磚載好，圖磚一直是 `visibility: hidden`；② rubrowser 不送 `Referer`，OpenStreetMap 的圖磚伺服器回傳「Access blocked」 | 圖片解碼後送 `load`（失敗送 `error`），加上 `complete`、`naturalWidth`、`naturalHeight`；請求依預設的 `strict-origin-when-cross-origin` 送 `Referer` |
 | 網頁文字不能選、Cmd-C 沒作用 | 只有輸入框有選取與剪貼簿 | 拖曳選取、雙擊選字、Shift 點擊延伸、Cmd-A 全選、Cmd-C 複製（多行用換行接起來） |
 | 沒有右鍵選單 | 沒有實作 | 右鍵或 macOS 的 Ctrl＋點擊：複製、全選、上一頁、下一頁、重新載入；連結與圖片另有開啟、在新分頁開啟、複製網址、下載；輸入框有剪下、複製、貼上、全選；網頁取消 `contextmenu` 事件時不顯示 |
+| Cmd-C 等快捷鍵在視窗裡沒作用（右鍵選單的複製可以） | 用注音等非拉丁輸入法時，C 鍵的字元是「ㄏ」，rubrowser 認不出 Cmd+C | 按著 Cmd／Ctrl 而字元不是拉丁字母時，改用按鍵在美式鍵盤上的位置判斷（瀏覽器的通例） |
+| 地圖按住拖不動 | rubrowser 沒送 `mousemove`／Pointer Events，且滑鼠事件的 `which` 是 0（Leaflet 用 `which === 1` 判斷左鍵） | 依 UI Events／Pointer Events 送 `pointerdown`→`mousedown`、`pointermove`→`mousemove`、`pointerup`→`mouseup`，`which = button + 1`、`buttons`；`selectstart` 被取消或 `user-select: none` 時拖曳不選字 |
+| webportal 點分類不會進去 | 沒有 `location.hash` 的 setter 與 `hashchange` 事件 | 補上；上一頁／下一頁在同一頁的 # 之間移動時送 `popstate` 與 `hashchange` |
+| 琴鍵實驗室沒有聲音 | 沒有 Web Audio API（琴鍵也用 `pointerdown`） | Web Audio 的子集：`AudioContext`、`OscillatorNode`、`GainNode`、`AudioParam` 排程（set、線性／指數漸變、setTargetAtTime、cancel）、`ended`；有影音功能時由 cpal 輸出到喇叭 |
+| 關分頁後網址列還是舊分頁的網址；視窗較矮時按 Cmd-L 會當掉 | 網址列有焦點時不更新；畫布外的矩形取交集後的起點超出陣列 | 切換／關閉分頁時網址列換成新分頁的網址；不相交的矩形交集為空 |
 
 ![地圖應用顯示 OpenStreetMap 的底圖與三個釘選](map.png)
 
