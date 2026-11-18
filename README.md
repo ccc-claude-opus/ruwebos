@@ -68,9 +68,13 @@ cd ruwebos && ./ruwebos
 | `./ruwebos --screenshot home.png [網址]` | 開機、用 rubrowser 截圖、關機 |
 | `./ruwebos --test` | 開機、跑每個應用的測試（`apps/*/test.mjs`）、關機 |
 | `./ruwebos --accel tcg` | 指定加速器（預設依序 hvf → kvm → tcg） |
+| `./ruwebos --qemu` | 改用 QEMU（`qemu-system-aarch64` 的 `virt` 機型）開同一份核心、系統碟與資料碟；可以和其他選項一起用 |
+| `./ruwebos --memory 8192` | VM 的記憶體（MB，預設 2048） |
 | `image/build.sh` | 重建系統碟 `out/system.ext4`（資料碟 `out/data.ext4` 不受影響） |
 
 應用的網址是 `http://<名稱>.localhost:8700/`。
+
+系統碟不綁定 ruvm：核心與磁碟都是標準的 ARM64 Linux 與 virtio 裝置，QEMU 也能開（initramfs 只有 virtio-mmio 的驅動，所以 QEMU 用 `virtio-*-device`）。2026-11-19 在 iMac M3 上，ruvm 與 QEMU（`-accel hvf`，8 GB）都通過全部 14 個應用的測試；從啟動到可以使用，ruvm 約 2.0 秒、QEMU 約 1.1 秒。QEMU 模擬的樹莓派 4（`raspi4b`）固定 2 GB 記憶體、只能軟體模擬，所以不拿來測；在樹莓派上直接安裝的計畫見 [doc/todo.md](doc/todo.md)。
 
 | 基本應用（本 repo 的 `apps/`） | |
 |---|---|
