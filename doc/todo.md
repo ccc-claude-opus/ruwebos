@@ -17,10 +17,16 @@
 
 * 跨來源請求（CORS）：腳本對其他來源的 `fetch`／`XMLHttpRequest` 目前一律擋下。
 * 以元素 id 當全域變數（HTML 的 named access on Window）。
-* 觸控事件（Touch Events／Pointer Events 的 `pointerType: "touch"`）：放到平板上之前需要。
 * WebSocket 交握時帶 cookie。
 * shadow DOM 的繪製、真正執行的 Web Worker、WebGL、canvas 的陰影與濾鏡、輸入法（IME）。
 * `<textarea>` 沒有套用頁面指定的字型（Google 搜尋框顯示成等寬字）。
+
+## 放上平板之前（rubrowser）
+
+建議的硬體是 Raspberry Pi 5 加官方觸控螢幕，不用 VM，直接安裝，用 kiosk 合成器（例如 `cage`）把 rubrowser 開成全螢幕。這之前 rubrowser 要補：
+
+* **觸控**：目前完全沒有處理觸控事件，手指點擊、滑動捲頁、兩指縮放都還不能用（Touch Events，以及 Pointer Events 的 `pointerType: "touch"`）。
+* **螢幕鍵盤**：沒有實體鍵盤時，需要一個顯示在畫面上的鍵盤（文字欄位取得焦點時出現）。
 
 ## ruwebos
 
