@@ -23,6 +23,8 @@
 
 ## 放上平板之前（rubrowser）
 
+規劃見 [touch.md](touch.md)（第一步：觸控與英數鍵盤）。
+
 建議的硬體是 Raspberry Pi 5 加官方觸控螢幕，不用 VM，直接安裝，用 kiosk 合成器（例如 `cage`）把 rubrowser 開成全螢幕。這之前 rubrowser 要補：
 
 * **觸控**：目前完全沒有處理觸控事件，手指點擊、滑動捲頁、兩指縮放都還不能用（Touch Events，以及 Pointer Events 的 `pointerType: "touch"`）。
