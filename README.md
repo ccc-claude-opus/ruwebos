@@ -87,8 +87,13 @@ cd ruwebos && ./ruwebos
 | 天氣 `weather` | 現在、24 小時與一週預報（Open-Meteo） |
 | 地圖 `map` | 釘選地圖（Leaflet + OpenStreetMap） |
 | 設定 `settings` | 系統資訊、應用、授權清單 |
+| 安裝程式 `installer` | 安裝、更新、移除應用與它們的權限；主畫面的我的最愛 |
 
-另外預裝 rucloud 的範例應用：myshop、friendbook、markpedia、music、boardgame、app-builder、webportal、ccc。
+## 安裝應用
+
+網站在網頁裡宣告套件（`<link rel="ruwebos-app" href="app.tar.gz">`）時，rubrowser 的網址列旁會出現「安裝」；也可以在安裝程式貼上套件或 GitHub 儲存庫的網址。安裝的應用在 `http://<名稱>.localhost:8700/` 執行、資料在資料碟，要讀寫「檔案」、讀系統資訊、連網際網路都要使用者同意（安裝時，或應用需要時再問），之後可以在安裝程式收回。只有網址的網站可以加到主畫面的「我的最愛」。設計與給應用開發者的說明見 [doc/install.md](doc/install.md)。
+
+rucloud 的範例應用 myshop、friendbook、markpedia、music、boardgame、webportal、ccc 是預裝的套件：第一次開機時裝好，可以像其他應用一樣移除；app-builder 仍是系統應用。
 
 ![第 1 批基本應用](doc/apps.png)
 
@@ -108,8 +113,10 @@ cd ruwebos && ./ruwebos
 * [doc/stage1.md](doc/stage1.md)：階段 1（一鍵啟動的系統映像）的設計與實測數字
 * [doc/apps.md](doc/apps.md)：基本應用（檔案、通訊錄、相機、相簿……）的規劃
 * [doc/batch1.md](doc/batch1.md)、[doc/batch2.md](doc/batch2.md)：第 1、2 批基本應用的功能、標準與實測結果
+* [doc/install.md](doc/install.md)：軟體安裝（套件、權限、安裝程式），以及怎麼寫可以安裝的應用
+* [doc/todo.md](doc/todo.md)：待辦與已知問題
 
-開發應用時可以不經 VM，直接在主機上跑：`rucloud serve $PWD/apps/dev.toml`（主畫面 `http://localhost:8790/`），測試用 `node apps/test.mjs http://localhost:8790`。
+開發應用時可以不經 VM，直接在主機上跑：先 `node image/gen-home.mjs ../rucloud` 與 `node image/gen-packages.mjs ../rucloud`，再 `rucloud serve $PWD/apps/dev.toml`（主畫面 `http://localhost:8790/`），測試用 `node apps/test.mjs http://localhost:8790`。
 
 ## 授權
 

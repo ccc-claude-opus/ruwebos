@@ -3,9 +3,11 @@
 //   GET /network    網路：介面、位址、閘道、DNS（由 /sbin/init 寫入），以及現在能不能連到網際網路
 //   GET /apps       應用清單（rucloud 管理埠的 /apps 與 /stats）
 //   GET /licenses   映像裡每個套件的授權（建置時產生的 public/licenses.md）
+//   GET /api/v1/system  給安裝的應用（權限 system:info）：時區、語言、系統版本
 // 系統資訊與管理埠的網址、token 由 /sbin/init 寫進 env_file（SYS_*、ADMIN_URL、ADMIN_TOKEN）；
 // 直接在主機上跑（開發）時沒有這些值，頁面會註明。
-import { app, page, html, raw, homeUrl, tzOf, fmt } from '../../_shared/lib.js';
+import { app, page, html, raw, homeUrl, tzOf, fmt, json } from '../../_shared/lib.js';
+import { check } from '../../_shared/grant.js';
 import { markdown } from '../../_shared/markdown.js';
 
 const APP = { name: '設定', color: '#868e96' };
@@ -96,6 +98,21 @@ ${dev ? html`<p class="muted">（直接在主機上執行，沒有 VM 的網路�
   });
 }
 
+// 安裝的應用（安裝程式記的：名稱、版本、授權、權限）；沒有安裝程式時是空的
+async function installedApps(env) {
+  try {
+    const r = env.INSTALLER ? await env.INSTALLER.fetch('http://installer/api/apps') : null;
+    return r && r.ok ? (await r.json()).apps : [];
+  } catch {
+    return [];
+  }
+}
+
+const installerUrl = (request, path = '') => {
+  const u = new URL(request.url);
+  return `${u.protocol}//installer.localhost${u.port ? ':' + u.port : ''}/${path}`;
+};
+
 async function apps(request, env, url) {
   let list, stats, error;
   try {
@@ -103,6 +120,7 @@ async function apps(request, env, url) {
   } catch (e) {
     error = e.message;
   }
+  const installed = new Map((await installedApps(env)).map((a) => [a.id, a]));
   const byName = new Map((stats?.apps || []).map((a) => [a.name, a]));
   const edge = new URL(request.url);
   const link = (a) => (a.hosts?.[0] ? `${edge.protocol}//${a.hosts[0]}${edge.port ? ':' + edge.port : ''}/` : `${edge.protocol}//${a.name}.localhost${edge.port ? ':' + edge.port : ''}/`);
@@ -113,6 +131,7 @@ async function apps(request, env, url) {
 <h2>已安裝的應用</h2>
 ${error ? html`<p class="error">${error}</p>` : ''}
 ${!list && !error ? html`<p class="muted">（沒有管理埠的設定：直接在主機上執行時看不到應用清單。）</p>` : ''}
+<p><a class="btn" href="${installerUrl(request)}">安裝程式：安裝、更新、移除應用與權限</a></p>
 ${list
   ? html`<ul class="list">${list
       .slice()
@@ -120,7 +139,9 @@ ${list
       .map((a) => {
         const s = byName.get(a.name) || {};
         const req = typeof s.count === 'number' ? s.count : null;
-        return html`<li><a class="main" href="${link(a)}"><img class="icon" src="${link(a)}icon.svg" alt="" width="36" height="36"><span class="grow"><strong>${a.name}</strong><span class="sub">${a.kind === 'dynamic' ? '動態新增 · ' : ''}${a.version ? `版本 ${a.version} · ` : ''}${a.instances ? `${a.instances} 個 Worker` : '只有靜態檔案'}${req !== null ? ` · ${req} 個請求` : ''}</span></span></a></li>`;
+        const inst = installed.get(a.name);
+        const what = inst ? `安裝的應用 ${inst.version}（${inst.license}）· ${inst.granted.length ? `權限 ${inst.granted.join('、')}` : '沒有權限'} · ` : a.kind === 'dynamic' ? '動態新增 · ' : a.version ? `版本 ${a.version} · ` : '';
+        return html`<li><a class="main" href="${inst ? installerUrl(request, `apps/${a.name}`) : link(a)}"><img class="icon" src="${link(a)}icon.svg" alt="" width="36" height="36"><span class="grow"><strong>${inst ? inst.name : a.name}</strong><span class="sub">${what}${a.instances ? `${a.instances} 個 Worker` : '只有靜態檔案'}${req !== null ? ` · ${req} 個請求` : ''}</span></span></a></li>`;
       })}</ul>`
   : ''}`,
   });
@@ -129,15 +150,27 @@ ${list
 async function licenses(request, env, url) {
   const r = env.ASSETS ? await env.ASSETS.fetch(new URL('/licenses.md', request.url)) : null;
   const text = r && r.ok ? await r.text() : '';
+  const installed = await installedApps(env);
   return page(request, {
     app: APP,
     title: '授權',
     body: html`${tabs(url)}
+${installed.length ? html`<h2>安裝的應用</h2><table><tr><th>應用</th><th>版本</th><th>授權</th></tr>${installed.map((a) => html`<tr><td><a href="${installerUrl(request, `apps/${a.id}`)}">${a.name}</a></td><td>${a.version}</td><td>${a.license}</td></tr>`)}</table><h2>系統碟</h2>` : ''}
 ${text ? html`<div class="prose">${raw(markdown(text))}</div>` : html`<p class="muted">（授權清單在建置系統碟時產生；直接在主機上執行時沒有。）</p>`}`,
   });
 }
 
-export default app(APP, async (request, env, url) => {
+export default app(APP, async (request, env, url, ctx) => {
+  const no = check(ctx, url, 'system:info');
+  if (no) return no;
+  if (url.pathname === '/api/v1/system' && request.method === 'GET') {
+    return json({
+      timeZone: env.SYS_TZ || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      language: 'zh-TW',
+      os: env.SYS_OS || null,
+      rucloud: env.SYS_RUCLOUD || null,
+    });
+  }
   if (request.method !== 'GET') return null;
   if (url.pathname === '/') return system(request, env, url);
   if (url.pathname === '/network') return network(request, env, url);

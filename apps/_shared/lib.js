@@ -80,6 +80,8 @@ export const json = (data, status = 200) =>
 
 /** Form fields as an object of strings (files stay File objects; repeated names become arrays). */
 export async function readForm(request) {
+  // 沒有表單內容（例如只有按鈕的 POST 由腳本送出、沒有 Content-Type）
+  if (!/form-data|x-www-form-urlencoded/i.test(request.headers.get('content-type') || '')) return {};
   const fd = await request.formData();
   const out = {};
   for (const [k, v] of fd.entries()) {

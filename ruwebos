@@ -120,18 +120,21 @@ fi
 grep -h '^== ruwebos' $log || true
 echo "ruwebos: ready after $(since "$t0") s (-accel $accel), $url"
 
+# rubrowser shows an Install button on pages that declare an app package, opening the installer
+installer=http://installer.localhost:8700/
+
 case $mode in
     headless)
         echo "ruwebos: Ctrl-C to power off"
         wait $pid || true
         ;;
     screenshot)
-        "$rubrowser" --screenshot "$shot" --width 1280 --height 800 "$url"
+        "$rubrowser" --installer "$installer" --screenshot "$shot" --width 1280 --height 800 "$url"
         echo "ruwebos: $shot rendered $(since "$t0") s after the launch"
         poweroff
         ;;
     window)
-        "$rubrowser" "$url" || true
+        "$rubrowser" --installer "$installer" "$url" || true
         poweroff
         ;;
     test)

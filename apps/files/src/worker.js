@@ -5,7 +5,12 @@
 //   POST /upload  /mkdir  /rename  /move  /delete
 //   GET  /trash   POST /trash/restore  /trash/purge  /trash/empty
 //   GET  /api/list?dir=        給其他應用的 JSON
+// 給安裝的應用（service binding，權限 files:read／files:write，見 _shared/grant.js）：
+//   GET    /api/v1/list?dir=      資料夾內容              GET /api/v1/file?path=   檔案內容（Range）
+//   PUT    /api/v1/file?path=     寫入（body 是內容；已有就覆蓋）   DELETE /api/v1/file?path=  搬到垃圾桶
+//   POST   /api/v1/mkdir?path=    建立資料夾
 import { app, page, html, raw, redirect, readForm, json, tzOf, fmt, UserError } from '../../_shared/lib.js';
+import { check, caller } from '../../_shared/grant.js';
 import { markdown } from '../../_shared/markdown.js';
 import { serveObject, filesOf, size } from '../../_shared/r2.js';
 
@@ -335,8 +340,65 @@ async function act(request, env, url) {
   return null;
 }
 
-export default app(APP, async (request, env, url) => {
+// 安裝的應用用的 API（也給系統自己的應用）；錯誤一律回 JSON
+async function apiV1(request, env, url, ctx) {
+  const b = env.FILES;
   const p = url.pathname;
+  const read = request.method === 'GET' || request.method === 'HEAD';
+  const no = check(ctx, url, ...(read ? ['files:read', 'files:write'] : ['files:write']));
+  if (no) return no;
+  try {
+    if (p === '/api/v1/list' && read) {
+      const dir = checkDir(url.searchParams.get('dir') || '');
+      const { objects, prefixes } = await listAll(b, dir, '/');
+      return json({
+        dir,
+        folders: prefixes.filter((x) => x !== TRASH),
+        files: objects.filter((o) => !o.key.endsWith('/')).map((o) => ({ path: o.key, size: o.size, type: o.httpMetadata?.contentType || guess(o.key), uploaded: o.uploaded })),
+      });
+    }
+    if (p === '/api/v1/file') {
+      const path = checkPath(url.searchParams.get('path') || '');
+      if (!path || path.endsWith('/')) throw new UserError('path 要是檔案的路徑（例如 docs/a.txt）');
+      if (read) {
+        if (!(await b.head(path))) return json({ error: 'not_found', message: `找不到 ${path}` }, 404);
+        return serveObject(request, b, path);
+      }
+      if (request.method === 'PUT') {
+        const len = Number(request.headers.get('content-length') || 0);
+        if (len > MAX_UPLOAD) throw new UserError('檔案太大（上限 100 MB）');
+        const data = await request.arrayBuffer();
+        if (data.byteLength > MAX_UPLOAD) throw new UserError('檔案太大（上限 100 MB）');
+        const type = request.headers.get('content-type') || guess(path);
+        await b.put(path, data, { httpMetadata: { contentType: type }, customMetadata: caller(ctx) ? { by: caller(ctx).app } : {} });
+        return json({ path, size: data.byteLength, type });
+      }
+      if (request.method === 'DELETE') {
+        if (!(await exists(b, path))) return json({ error: 'not_found', message: `找不到 ${path}` }, 404);
+        const stamp = String(Date.now());
+        await moveTree(b, path, `${TRASH}${stamp}/${path}`, (key) => ({ from: key, root: path }));
+        return json({ trashed: path, trash: stamp });
+      }
+    }
+    if (p === '/api/v1/mkdir' && request.method === 'POST') {
+      const dir = checkDir(url.searchParams.get('path') || '');
+      if (!dir) throw new UserError('path 要是資料夾的路徑');
+      if (!(await exists(b, dir))) await b.put(dir, new Uint8Array(0));
+      return json({ dir });
+    }
+    return json({ error: 'not_found', message: '沒有這個 API' }, 404);
+  } catch (e) {
+    if (e instanceof UserError) return json({ error: 'bad_request', message: e.message }, 400);
+    throw e;
+  }
+}
+
+export default app(APP, async (request, env, url, ctx) => {
+  const p = url.pathname;
+  if (p.startsWith('/api/v1/')) return apiV1(request, env, url, ctx);
+  // 安裝的應用只能用 /api/v1/
+  const no = check(ctx, url);
+  if (no) return no;
   if (request.method === 'POST') return act(request, env, url);
   if (request.method !== 'GET' && request.method !== 'HEAD') return null;
   const decode = (s) => s.split('/').map(decodeURIComponent).join('/');

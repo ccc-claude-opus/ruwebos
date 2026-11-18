@@ -2,12 +2,20 @@
 #   rucloud serve $PWD/apps/dev.toml      （設定檔要用絕對路徑，allow_read 才會對）
 #   node apps/test.mjs http://localhost:8790
 # 主畫面 http://localhost:8790/，應用 http://<名稱>.localhost:8790/；資料在 out/dev-state。
+# 預裝套件（rucloud 的範例）要先產生：node image/gen-packages.mjs ../rucloud；主畫面的系統應用：node image/gen-home.mjs ../rucloud
 state_dir = "../out/dev-state"
 shutdown_timeout = 1
-# 主機的 Node 25 在權限模式下還要 --allow-net，rucloud 尚未支援；開發時每個應用都 sandbox = false（VM 裡的 Node 24 照常開）
 
 [edge]
 port = 8790
+
+# 安裝程式要用管理埠（[install]）；token 不設就自動產生在 out/dev-state/admin-token
+[admin]
+port = 8791
+
+[install]
+grant = ["installer"]
+services = ["files", "settings"]
 
 [[app]]
 path = "../home"
@@ -16,71 +24,63 @@ hosts = ["localhost", "127.0.0.1"]
 [[app]]
 path = "files"
 allow_read = ["_shared"]
-sandbox = false
 
 [[app]]
 path = "contacts"
 d1_init = { DB = "schema.sql" }
 allow_read = ["_shared"]
-sandbox = false
 
 [[app]]
 path = "calendar"
 d1_init = { DB = "schema.sql" }
 allow_read = ["_shared"]
-sandbox = false
 
 [[app]]
 path = "notes"
 d1_init = { DB = "schema.sql" }
 allow_read = ["_shared"]
-sandbox = false
 
 [[app]]
 path = "todo"
 d1_init = { DB = "schema.sql" }
 allow_read = ["_shared"]
-sandbox = false
 
 [[app]]
 path = "calculator"
 allow_read = ["_shared"]
-sandbox = false
 
 [[app]]
 path = "clock"
 allow_read = ["_shared"]
-sandbox = false
 
 [[app]]
 path = "map"
 d1_init = { DB = "schema.sql" }
-sandbox = false
 
 [[app]]
 path = "settings"
 allow_read = ["_shared"]
-sandbox = false
 
 [[app]]
 path = "photos"
 d1_init = { DB = "schema.sql" }
 allow_read = ["_shared"]
-sandbox = false
 
 [[app]]
 path = "songs"
 d1_init = { DB = "schema.sql" }
 allow_read = ["_shared"]
-sandbox = false
 
 [[app]]
 path = "videos"
 d1_migrate = true
 allow_read = ["_shared"]
-sandbox = false
 
 [[app]]
 path = "weather"
 allow_read = ["_shared"]
-sandbox = false
+
+[[app]]
+path = "installer"
+d1_init = { DB = "schema.sql" }
+allow_read = ["_shared"]

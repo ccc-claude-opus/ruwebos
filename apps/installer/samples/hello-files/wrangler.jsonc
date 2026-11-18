@@ -1,0 +1,7 @@
+// 示範用的安裝應用：用「檔案」與系統資訊的權限，沒有權限時請使用者到安裝程式給
+{
+  "name": "hello-files",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-16",
+  "assets": { "directory": "./public" }
+}

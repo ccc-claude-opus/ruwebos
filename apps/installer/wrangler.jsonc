@@ -1,0 +1,9 @@
+// 安裝程式：安裝、更新、移除應用與它們的權限（rucloud 的 [install]），以及主畫面的我的最愛
+{
+  "name": "installer",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-11-16",
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "d1_databases": [{ "binding": "DB", "database_name": "installer", "database_id": "local" }],
+  "r2_buckets": [{ "binding": "PKG", "bucket_name": "installer" }]
+}

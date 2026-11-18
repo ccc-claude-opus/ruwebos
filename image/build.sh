@@ -27,13 +27,15 @@ cp image/init image/licenses.sh $stage/
 cp image/rucloud.toml $stage/ruwebos/
 node apps/_shared/gen.mjs
 node image/gen-home.mjs "$rucloud"
+node image/gen-packages.mjs "$rucloud"
 # only what the apps serve: no node_modules, local state or real secrets (.dev.vars)
 ex="--exclude=node_modules --exclude=.wrangler --exclude=.rucloud --exclude=.dev.vars --exclude=.git --exclude=test.mjs --exclude=dev.toml"
 rsync -a --delete $ex home/ $stage/ruwebos/home/
-rsync -a --delete $ex apps/ $stage/ruwebos/apps/
-mkdir -p $stage/ruwebos/examples
-rsync -a --delete $ex "$rucloud/apps/" $stage/ruwebos/examples/apps/
-rsync -a --delete $ex "$rucloud/sites/" $stage/ruwebos/examples/sites/
+rsync -a --delete $ex --exclude=/installer/samples apps/ $stage/ruwebos/apps/
+# rucloud's other examples are the installer's bundled packages (gen-packages.mjs); App Builder stays a system app
+mkdir -p $stage/ruwebos/examples/apps
+rm -rf $stage/ruwebos/examples/sites
+rsync -a --delete $ex "$rucloud/apps/app-builder/" $stage/ruwebos/examples/apps/app-builder/
 
 echo "== docker image ruwebos-system"
 docker build -q --platform linux/arm64 -t ruwebos-system -f image/Dockerfile $stage >/dev/null

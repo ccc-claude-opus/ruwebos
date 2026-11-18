@@ -20,6 +20,12 @@ token = "@ADMIN_TOKEN@"
 [dynamic]
 grant = ["app-builder"]
 
+# 安裝的應用（doc/install.md）：安裝程式用自己的 token 安裝、更新、移除，並給權限——
+# 綁定到這些系統應用（props 說明是哪個應用、哪些權限），以及連到網際網路
+[install]
+grant = ["installer"]
+services = ["files", "settings"]
+
 # 主畫面：http://localhost:8700、http://127.0.0.1:8700
 [[app]]
 path = "/opt/ruwebos/home"
@@ -86,34 +92,13 @@ path = "/opt/ruwebos/apps/settings"
 env_file = "/run/ruwebos/system.env"
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
-# ---- rucloud 的範例應用（rucloud repo 的 apps/、sites/）
+# 安裝程式；rucloud 的範例應用（friendbook、markpedia…）是它的預裝套件（public/packages/，image/gen-packages.mjs）
 [[app]]
-path = "/opt/ruwebos/examples/apps/myshop"
-env_file = "/opt/ruwebos/examples/apps/myshop/.dev.vars.example"
+path = "/opt/ruwebos/apps/installer"
 d1_init = { DB = "schema.sql" }
+allow_read = ["/opt/ruwebos/apps/_shared"]
 
-[[app]]
-path = "/opt/ruwebos/examples/apps/friendbook"
-env_file = "/opt/ruwebos/examples/apps/friendbook/.dev.vars.example"
-d1_init = { DB = "schema.sql" }
-
-[[app]]
-path = "/opt/ruwebos/examples/apps/markpedia"
-d1_init = { DB = "schema.sql" }
-
-[[app]]
-path = "/opt/ruwebos/examples/apps/music"
-d1_init = { DB = "schema.sql" }
-
-[[app]]
-path = "/opt/ruwebos/examples/apps/boardgame"
-
+# ---- rucloud 的範例應用：App Builder（要用 [dynamic]，所以是系統應用；其他範例改成預裝套件）
 [[app]]
 path = "/opt/ruwebos/examples/apps/app-builder"
 d1_init = { DB = "schema.sql" }
-
-[[app]]
-path = "/opt/ruwebos/examples/sites/webportal"
-
-[[app]]
-path = "/opt/ruwebos/examples/sites/ccc"

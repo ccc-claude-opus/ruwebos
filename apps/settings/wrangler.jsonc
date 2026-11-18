@@ -3,5 +3,6 @@
   "name": "settings",
   "main": "src/worker.js",
   "compatibility_date": "2025-11-16",
-  "assets": { "directory": "./public", "binding": "ASSETS" }
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "services": [{ "binding": "INSTALLER", "service": "installer" }]
 }

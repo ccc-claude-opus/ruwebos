@@ -1,6 +1,8 @@
-// ruwebos 的主畫面：只有靜態檔案，列出系統碟上預裝的應用（image/rucloud.toml）
+// ruwebos 的主畫面：系統應用（建置時由 image/gen-home.mjs 產生 public/apps.json）、安裝的應用與我的最愛（問安裝程式）
 {
   "name": "home",
+  "main": "src/worker.js",
   "compatibility_date": "2025-11-16",
-  "assets": { "directory": "./public" }
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "services": [{ "binding": "INSTALLER", "service": "installer" }]
 }

@@ -6,7 +6,7 @@
 
 | 項目 | 狀況 | 已知的原因或線索 | 下一步 |
 |---|---|---|---|
-| friendbook 發文失敗 | 使用者在 VM 裡登入（帳號 ccc）後發文不成功 | 在本機另起一份，以同樣的主機名 `friendbook.localhost`、登入、發純文字與多行 Markdown 都成功；VM 裡的 `app.js` 與 repo 相同 | 請使用者提供失敗時發文框下方的訊息；看 VM 裡 rucloud 的 log |
+| friendbook 發文失敗 | 使用者在 VM 裡登入（帳號 ccc）後發文不成功 | 在本機另起一份，以同樣的主機名 `friendbook.localhost`、登入、發純文字與多行 Markdown 都成功；VM 裡的 `app.js` 與 repo 相同 | 2026-11-18 查 VM 的資料：帳號 ccc 的 2 篇貼文**有存進資料庫**，所以可能是發文後畫面沒更新（動態牆沒重新載入）。請使用者描述發文後看到什麼 |
 | Google 搜尋結果頁空白 | 首頁可以打字、按 Enter 送出，結果頁空白 | 結果頁先跑一段 JS 驗證，沒通過就以 `<noscript>` 的 meta refresh 導向「請啟用 JavaScript」 | 提升整體 JS 相容性；**不繞過**驗證 |
 | YouTube 只有灰色骨架 | 沒有影片、沒有文字 | `webcomponents-sd.js`（web components polyfill）第 102 行 `cannot convert 'null' or 'undefined' to object`；`spf.js` 的 `not a callable function` | 查 polyfill 用到的 `Object.getOwnPropertyDescriptor` 等；shadow DOM 的繪製 |
 | Gmail 空白 | `mail.google.com` 轉到 Google 登入頁後空白 | Google 登入對非主流瀏覽器另有限制 | 短期不列為目標 |
@@ -28,11 +28,16 @@
 * **觸控**：目前完全沒有處理觸控事件，手指點擊、滑動捲頁、兩指縮放都還不能用（Touch Events，以及 Pointer Events 的 `pointerType: "touch"`）。
 * **螢幕鍵盤**：沒有實體鍵盤時，需要一個顯示在畫面上的鍵盤（文字欄位取得焦點時出現）。
 
+## 安全
+
+* **跨應用的表單送出（CSRF）**：任何網頁（包括外部網站與安裝的應用的網頁）都能在 rubrowser 裡對 `http://files.localhost:8700/delete` 這類系統應用的表單網址送出 POST；系統應用沒有登入，所以分不出是不是使用者自己按的。要做的：rubrowser 依 Fetch 標準在非 GET 的請求送 `Origin`（以及 `Sec-Fetch-Site`），系統應用（`_shared/lib.js` 的 `app()`）拒絕來源不是自己的 POST。
+* 安裝的應用的網路限制是在 Worker 的執行環境裡擋（rucloud 的 runtime），不是作業系統層級的隔離。
+
 ## ruwebos
 
 * 「檔案」裡的虛擬資料夾（在檔案總管看到相簿、音樂）。
 * 縮圖依 EXIF 方向轉正。
-* 軟體安裝：見 [install.md](install.md)。
+* 軟體安裝（[install.md](install.md)）還沒做的：相簿、音樂、通訊錄、行事曆的權限；定期自動檢查更新；`.zip` 套件與 GitHub 以外的 Git 主機。
 
 ## 未來改良
 
