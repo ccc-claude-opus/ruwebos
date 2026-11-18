@@ -217,8 +217,9 @@ case $mode in
         case $browser in
             rubrowser) "$rubrowser" --installer "$installer" --keyboard "$keyboard" "$url" || true ;;
             chrome)
+                # a normal window (back, address bar, tabs), not --app, which has no toolbar
                 "$chrome" --user-data-dir="$PWD/out/chrome-profile" --no-first-run --no-default-browser-check \
-                    --window-size=1280,860 --app="$url" >/dev/null 2>&1 || true ;;
+                    --window-size=1280,900 --new-window "$url" >/dev/null 2>&1 || true ;;
             firefox)
                 mkdir -p out/firefox-profile
                 "$firefox" --new-instance --profile "$PWD/out/firefox-profile" "$url" >/dev/null 2>&1 || true ;;

@@ -76,7 +76,7 @@ cd ruwebos && ./ruwebos
 
 應用的網址是 `http://<名稱>.localhost:8700/`。
 
-應用都是標準的網頁，瀏覽器只是用戶端，所以可以抽換：日常使用建議用成熟的瀏覽器（Chrome、Firefox、Safari 都能直接開 `*.localhost`），rubrowser 是本專案自己的瀏覽器，用來研究與驗證標準相容性。rubrowser 獨有的功能在其他瀏覽器裡改用系統的方式：網頁宣告的套件 → 在安裝程式貼上網址安裝；加到主畫面 → 安裝程式的「我的最愛」；虛擬鍵盤 → 作業系統或瀏覽器自己的。Chrome 以 app 視窗開啟；在 macOS 上關掉視窗後 Chrome 還在執行，要結束 Chrome（⌘Q）才會關機。
+應用都是標準的網頁，瀏覽器只是用戶端，所以可以抽換：日常使用建議用成熟的瀏覽器（Chrome、Firefox、Safari 都能直接開 `*.localhost`），rubrowser 是本專案自己的瀏覽器，用來研究與驗證標準相容性。rubrowser 獨有的功能在其他瀏覽器裡改用系統的方式：網頁宣告的套件 → 在安裝程式貼上網址安裝；加到主畫面 → 安裝程式的「我的最愛」；虛擬鍵盤 → 作業系統或瀏覽器自己的。Chrome 以一般的視窗開啟（有上一頁、網址列、分頁）；在 macOS 上關掉視窗後 Chrome 還在執行，要結束 Chrome（⌘Q）才會關機。
 
 系統碟不綁定 ruvm：核心與磁碟都是標準的 ARM64 Linux 與 virtio 裝置，QEMU 也能開（initramfs 只有 virtio-mmio 的驅動，所以 QEMU 用 `virtio-*-device`）。2026-11-19 在 iMac M3 上，ruvm 與 QEMU（`-accel hvf`，8 GB）都通過全部 14 個應用的測試；從啟動到可以使用，ruvm 約 2.0 秒、QEMU 約 1.1 秒。QEMU 模擬的樹莓派 4（`raspi4b`）固定 2 GB 記憶體、只能軟體模擬，所以不拿來測；在樹莓派上直接安裝的計畫見 [doc/todo.md](doc/todo.md)。
 
