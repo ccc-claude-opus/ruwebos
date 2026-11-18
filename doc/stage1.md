@@ -93,7 +93,7 @@ rucloud 的 edge 依 Host 分派：主畫面是 `http://localhost:8700/`，應�
 
 ## 已知問題與後續
 
-* **rubrowser 的地圖圖磚**：Leaflet 的底圖沒有畫出來，地圖頁因為要從 unpkg 與 OpenStreetMap 載入資源，截圖要約 20 秒。屬於 rubrowser 的工作。
+* ~~rubrowser 的地圖圖磚~~（已解決，見 [batch2.md](batch2.md) 的「地圖的底圖」）：Leaflet 的底圖沒有畫出來，地圖頁因為要從 unpkg 與 OpenStreetMap 載入資源，截圖要約 20 秒。屬於 rubrowser 的工作。
 * **rubrowser 用 debug 版**：主畫面 4.7 秒裡有 3.1 秒是 rubrowser；換 release 版會更快。
 * **埠固定為 8700**：主畫面的連結寫死 `:8700`，主機上這個埠被占用時啟動器會停下來並說明。
 * **ruvm 把磁碟整顆讀進記憶體**：系統碟 412 MB + 資料碟 512 MB 都在主機記憶體裡；資料碟變大時要改成按需讀寫。

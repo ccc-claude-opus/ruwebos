@@ -57,6 +57,18 @@ rubrowser 的 `document.cookie` 只存在頁面裡、不會送到伺服器，所
 
 授權：ruwebos 沒有包含或連結 FFmpeg；有影音功能的 rubrowser 連結機器上的 FFmpeg，散布那樣的執行檔時要遵守該 FFmpeg 的授權（見 README 的「授權」）。
 
+## 地圖的底圖、文字選取與右鍵選單（rubrowser）
+
+試用時發現的問題，都在 rubrowser 依標準修正：
+
+| 問題 | 原因 | 修正 |
+|---|---|---|
+| 地圖只有灰底與標記 | ① rubrowser 沒有對 `<img>` 送 `load`／`error` 事件，Leaflet 等不到圖磚載好，圖磚一直是 `visibility: hidden`；② rubrowser 不送 `Referer`，OpenStreetMap 的圖磚伺服器回傳「Access blocked」 | 圖片解碼後送 `load`（失敗送 `error`），加上 `complete`、`naturalWidth`、`naturalHeight`；請求依預設的 `strict-origin-when-cross-origin` 送 `Referer` |
+| 網頁文字不能選、Cmd-C 沒作用 | 只有輸入框有選取與剪貼簿 | 拖曳選取、雙擊選字、Shift 點擊延伸、Cmd-A 全選、Cmd-C 複製（多行用換行接起來） |
+| 沒有右鍵選單 | 沒有實作 | 右鍵或 macOS 的 Ctrl＋點擊：複製、全選、上一頁、下一頁、重新載入；連結與圖片另有開啟、在新分頁開啟、複製網址、下載；輸入框有剪下、複製、貼上、全選；網頁取消 `contextmenu` 事件時不顯示 |
+
+![地圖應用顯示 OpenStreetMap 的底圖與三個釘選](map.png)
+
 ## 已知問題與後續
 
 * **Open-Meteo 的預報主機**（`api.open-meteo.com`）從這裡的網路連不上（TLS 握手逾時；同一家的地理編碼主機正常），天氣頁顯示「無法取得天氣資料：連線逾時」。應用照常運作，連得上時就會有資料。
