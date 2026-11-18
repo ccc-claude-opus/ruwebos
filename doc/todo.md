@@ -32,4 +32,8 @@
 
 * 「檔案」裡的虛擬資料夾（在檔案總管看到相簿、音樂）。
 * 縮圖依 EXIF 方向轉正。
-* 軟體安裝：見 [install.md](install.md)（規劃中）。
+* 軟體安裝：見 [install.md](install.md)。
+
+## 未來改良
+
+* **從 Cloudflare 帳號安裝**：用使用者提供的 Cloudflare API token，把自己帳號裡的 Worker（程式碼、設定、D1／KV 的資料）匯出成套件再安裝到 ruwebos。會碰到使用者的帳號，token 的保存與權限範圍要另外設計（[install.md](install.md) 的決定 4）。
