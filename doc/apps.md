@@ -50,6 +50,7 @@
 | 1 | **待辦** | 清單、期限、完成、重複；和行事曆共用日期 | D1 | — |
 | 1 | **計算機** | 一般與工程模式、歷史紀錄 | 只在頁面（`localStorage`） | — |
 | 1 | **時鐘** | 世界時鐘、碼錶、計時器；鬧鐘先只能在頁面開著時響 | KV | 背景鬧鐘要 Notifications |
+| 1 | **地圖** | 釘選、清單、搜尋地點；從 rucloud 的 `apps/map` 搬來，套上共用樣式與 manifest | D1 | 底圖圖磚目前畫不出來（rubrowser 待查） |
 | 1 | **設定** | 已安裝的應用、資料碟用量、系統版本、外觀（深淺色）、時區與語言、授權清單 | 讀 rucloud 管理埠（只在 VM 裡）、KV | — |
 | **2** | **相簿** | 照片與影片的格狀檢視、依日期分組、相簿、我的最愛、EXIF（拍攝時間、地點）、縮圖 | R2（原檔與縮圖）+ D1（索引、EXIF） | 檔案選擇、`File`、multipart 上傳 |
 | 2 | **音樂** | 曲目、專輯、播放清單、背景播放 | R2（range 讀取）+ D1 | 上傳；`<audio>` 已有 |
@@ -60,7 +61,7 @@
 | 3 | 時鐘的**背景鬧鐘**、行事曆**提醒** | 到時間由系統通知 | Durable Object alarm → 外殼顯示通知 | Notifications API |
 | 之後 | 訊息、郵件、應用商店、全系統搜尋 | 見[規劃](plan.md)階段 3～5 | — | WebSocket、帳號 |
 
-已經有的預裝應用照舊保留：地圖（map）、琴鍵實驗室（music，樂理學習，與上面的「音樂」播放器不同）、Markpedia、棋藝軒等。
+已經有的預裝應用照舊保留：琴鍵實驗室（music，樂理學習，與上面的「音樂」播放器不同）、Markpedia、棋藝軒等。
 
 ## 3. 共同的設計
 
@@ -87,10 +88,32 @@ flowchart LR
 
 ### 畫面與相容性
 
-* **伺服器產生 HTML、表單送出為主，JavaScript 補強**：主要操作在沒有 JavaScript 時也能用，rubrowser 缺某個 API 時不會整個應用壞掉，也比較快。
+* **表單為基礎、`fetch` 做互動、WebSocket 只用在需要推送的地方**（比較見下一節）。
 * 共用一份樣式（`apps/_shared/ui.css`：顏色、字級、清單、按鈕、深色模式），建置時複製進每個應用；版面一開始就同時照顧桌機（寬）與手機（390 px 寬）。
 * 每個應用附 `manifest.webmanifest`（名稱、圖示、主題色）。主畫面改成**建置時從各應用的 manifest 產生**，不再手寫；階段 3 的「安裝」也從這裡接上。
 * 只依 Web 標準實作，不針對 rubrowser 做特例；rubrowser 缺的部分在 rubrowser repo 依規格補。
+
+### 表單、fetch、WebSocket 的比較
+
+三種都是「瀏覽器和 rucloud 交換資料」的方式，差在誰發起、畫面怎麼更新：
+
+| | HTML 表單（伺服器產生頁面） | `fetch`（JavaScript 更新部分畫面） | WebSocket |
+|---|---|---|---|
+| 怎麼運作 | 送出 → 伺服器處理 → 回整頁新的 HTML（POST 後轉址） | JavaScript 送請求、拿回 JSON 或 HTML 片段，只改需要變的地方 | 開一條一直連著的雙向連線，伺服器可以主動送資料 |
+| 互動感 | 每個動作整頁重畫，捲動位置與輸入中的內容會重來 | 和一般 App 一樣，不閃、不跳 | 和 `fetch` 一樣，另外能即時收到別人／別台裝置的變更 |
+| 伺服器主動通知 | 不行 | 不行（只能定時輪詢） | 可以 |
+| 網址、上一頁、書籤 | 天生就對 | 要自己用 History API 維持 | 要自己維持 |
+| 沒有 JavaScript 或 JS 出錯時 | 照常可用 | 壞掉 | 壞掉 |
+| rubrowser 現況 | 可用 | 可用（`fetch`、DOM 都有） | **還沒有**，要先補 |
+| rucloud 端 | 一般 Worker | 一般 Worker | 要 Durable Object 管連線、斷線重連 |
+| 程式量 | 最少 | 中 | 最多 |
+
+結論：只用表單，互動性確實比較差；只用 `fetch`，rubrowser 的 JavaScript 有缺漏時整個應用不能用。所以採**漸進增強**：
+
+1. 每個操作先寫成一般的 `<form>`，伺服器回完整頁面——這是保底，也讓網址、上一頁都正確。
+2. 共用一支小腳本（`apps/_shared/enhance.js`，自己寫，約一百行）：攔下表單送出，改用 `fetch` 送，伺服器看到 `Accept` 標頭就只回要更新的那一段 HTML，腳本把它換進頁面並更新網址。使用者看到的是 `fetch` 的互動性；腳本失敗時自動退回整頁。
+3. 本來就只能在頁面上做的（計算機、碼錶、計時器、行事曆拖曳）直接用 JavaScript 寫。
+4. WebSocket 等 rubrowser 支援後，只用在真的需要伺服器推送的地方：多裝置即時同步、訊息、提醒。第 1 批的應用都是自己改自己的資料，不需要。
 
 ### 資料可以帶走
 
@@ -111,8 +134,8 @@ flowchart LR
 
 ## 4. 建議的順序
 
-1. **共同基礎**：`apps/_shared/ui.css`、manifest、主畫面改為自動產生、`--test`。
-2. **第 1 批**：檔案（管理、預覽、下載）→ 通訊錄 → 行事曆 → 備忘錄 → 待辦 → 計算機 → 時鐘 → 設定。
+1. **共同基礎**：`apps/_shared/ui.css`、`enhance.js`、manifest、主畫面改為自動產生、`--test`。
+2. **第 1 批**：檔案（管理、預覽、下載）→ 通訊錄 → 行事曆 → 備忘錄 → 待辦 → 計算機 → 時鐘 → 地圖 → 設定。
 3. **同時在 rubrowser 補**：`<input type="file">` 與檔案選擇對話框、`File` / `FileReader` / `Blob.arrayBuffer()`、`URL.createObjectURL`、multipart 送出、下載存檔。完成後檔案與通訊錄的上傳、匯入就能用。
 4. **第 2 批**：相簿 → 音樂 → 影片 → 天氣。
 5. **rubrowser 補** `getUserMedia`（macOS 用 AVFoundation、Linux 用 V4L2）、`MediaRecorder`、Notifications、WebSocket。
@@ -120,12 +143,12 @@ flowchart LR
 
 風險：攝影機與麥克風現在由主機上的 rubrowser 直接存取；到階段 2（rubrowser 在 VM 裡）時，ruvm 還需要把主機的攝影機與麥克風傳進 VM（例如 virtio 的影音裝置），這部分到時再規劃。
 
-## 5. 需要您決定的事
+## 5. 已決定的事（2026-11-18）
 
-| 問題 | 建議 |
+| 問題 | 決定 |
 |---|---|
-| 第 1 批的範圍與順序 | 如上：檔案、通訊錄、行事曆、備忘錄、待辦、計算機、時鐘、設定 |
+| 第 1 批的範圍與順序 | 檔案、通訊錄、行事曆、備忘錄、待辦、計算機、時鐘、設定，加上地圖（從 rucloud 的 `apps/map` 搬來） |
 | 應用放在哪個 repo | ruwebos 的 `apps/`；rucloud 的 `apps/` 保留給範例 |
-| 畫面做法 | 伺服器產生 HTML + 表單為主，JavaScript 補強 |
-| rubrowser 的檔案標準是否與第 1 批同時開工 | 是，另開 rubrowser 的工作，兩邊不互相等 |
-| 天氣用哪個公開資料來源 | Open-Meteo（免金鑰，資料 CC BY 4.0，頁面標示來源） |
+| 畫面做法 | 表單保底 + `fetch` 局部更新（漸進增強）；WebSocket 只用在需要伺服器推送的地方（見上面的比較） |
+| 天氣的資料來源 | Open-Meteo（免金鑰，資料 CC BY 4.0，頁面標示來源） |
+| rubrowser 的檔案標準 | 待確認：ruwebos 的應用照標準寫上傳（`<input type="file">` + multipart 表單），先用 curl 與其他瀏覽器測；rubrowser 另一條工作依規格補這些功能，補好後直接能用，兩邊不互相等 |
