@@ -71,6 +71,14 @@ rubrowser 的 `document.cookie` 只存在頁面裡、不會送到伺服器，所
 | webportal 點分類不會進去 | 沒有 `location.hash` 的 setter 與 `hashchange` 事件 | 補上；上一頁／下一頁在同一頁的 # 之間移動時送 `popstate` 與 `hashchange` |
 | 琴鍵實驗室沒有聲音 | 沒有 Web Audio API（琴鍵也用 `pointerdown`） | Web Audio 的子集：`AudioContext`、`OscillatorNode`、`GainNode`、`AudioParam` 排程（set、線性／指數漸變、setTargetAtTime、cancel）、`ended`；有影音功能時由 cpal 輸出到喇叭 |
 | 關分頁後網址列還是舊分頁的網址；視窗較矮時按 Cmd-L 會當掉 | 網址列有焦點時不更新；畫布外的矩形取交集後的起點超出陣列 | 切換／關閉分頁時網址列換成新分頁的網址；不相交的矩形交集為空 |
+| 棋藝軒（boardgame）畫面出不來 | 沒有 `HTMLIFrameElement` 等元素介面（`instanceof` 丟錯）；沒有 `WebSocket` | 依 HTML 補上各元素介面與 `namespaceURI`；實作 `WebSocket`（RFC 6455，`ws:`／`wss:`、文字與二進位訊息、子協定、關閉碼，每條連線一個執行緒，用 tungstenite） |
+| 地圖不能用滾輪縮放 | 沒有 `WheelEvent` 的 `deltaY`，`window.onwheel` 不存在（Leaflet 以 `'onwheel' in window` 判斷） | 先送可取消的 `wheel` 事件（含 `deltaX`／`deltaY`）再捲動；`Window` 補上各事件處理屬性 |
+| 上一頁回到網頁開頭 | 歷史記錄沒有存捲動位置 | 每筆歷史記錄記住離開時的位置，上一頁／下一頁／重新載入時還原（HTML 的 scroll restoration `auto`），頁面還在長大時一直保持，直到使用者自己捲動 |
+| Markpedia 一直「載入中…」 | 每頁都先載入 Mermaid（約 3 MB），在 rubrowser 的 JS 引擎裡要跑將近 20 秒，超過單次執行的時間上限 | Markpedia（rucloud repo）改成頁面有 mermaid 圖時才載入；rubrowser 補上 `document.compatMode` |
+| 中文網址連到 GitHub Pages 出現「Whoa there!」 | 網址的路徑直接送出 UTF-8 位元組 | 依 URL Standard 對路徑、查詢、片段做百分比編碼 |
+| ruby 注音顯示在字的右邊 | 沒有 ruby 排版 | `display: ruby`／`ruby-text`：注音置中放在本字上方，一個 `<ruby>` 可有多組，`<rp>` 隱藏 |
+| Google 搜尋框不能打字 | ① 沒有 `CSS.supports`；② `focus()` 是空的、`document.activeElement` 永遠是 body；③ 不支援 `pointer-events: none`，「AI 模式」按鈕放大的動畫層蓋住搜尋框、搶走點擊 | 補上 `CSS.supports`／`CSS.escape`、`focus()`／`blur()` 與 `activeElement`、`pointer-events: none`（也讓 `visibility: hidden` 的盒子不接點擊） |
+| 小店（myshop）完成交易顯示「缺日期」 | 用 `toLocaleDateString('sv')` 取 `YYYY-MM-DD`，rubrowser 不認得 sv | `Intl.DateTimeFormat` 加上 sv 與 en-CA 的日期格式（和 Node／ICU 的輸出相同） |
 
 ![地圖應用顯示 OpenStreetMap 的底圖與三個釘選](map.png)
 
@@ -79,4 +87,9 @@ rubrowser 的 `document.cookie` 只存在頁面裡、不會送到伺服器，所
 * **Open-Meteo 的預報主機**（`api.open-meteo.com`）從這裡的網路連不上（TLS 握手逾時；同一家的地理編碼主機正常），天氣頁顯示「無法取得天氣資料：連線逾時」。應用照常運作，連得上時就會有資料。
 * ~~影片與音樂在 rubrowser 裡播放~~：已解決，見上面的「影音的改善」。
 * **「檔案」裡的虛擬資料夾**（在檔案總管看到相簿、音樂）還沒做；目前是相簿可以從「檔案」加入照片。
+* **Google 搜尋結果頁**是空白：結果頁先跑一段 JS 驗證，通不過就導向「請啟用 JavaScript」；要靠整體 JS 相容性提升，不繞過。
+* **YouTube** 只有灰色骨架：它的 web components polyfill（`webcomponents-sd.js`）與 `spf.js` 在 rubrowser 裡拋錯，需要 shadow DOM 等較大的工作。
+* **Gmail** 轉到 Google 登入頁後是空白頁；Google 登入對非主流瀏覽器另有限制，短期內不列為目標。
+* **friendbook 發文**：在本機以同樣的主機名、登入、發多行 Markdown 都成功，還沒重現。
+* 棋藝軒的標題與副標文字重疊（排版問題，待查）。
 * 縮圖沒有依 EXIF 方向轉正（看瀏覽器畫 `<img>` 時是否套用 `image-orientation: from-image`）。
