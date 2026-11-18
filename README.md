@@ -70,6 +70,7 @@ cd ruwebos && ./ruwebos
 | `./ruwebos --accel tcg` | 指定加速器（預設依序 hvf → kvm → tcg） |
 | `./ruwebos --qemu` | 改用 QEMU（`qemu-system-aarch64` 的 `virt` 機型）開同一份核心、系統碟與資料碟；可以和其他選項一起用 |
 | `./ruwebos --memory 8192` | VM 的記憶體（MB，預設 2048） |
+| `./ruwebos --keyboard always` | rubrowser 的虛擬鍵盤：`auto`（用手指點輸入框時出現，預設）、`always`、`never` |
 | `image/build.sh` | 重建系統碟 `out/system.ext4`（資料碟 `out/data.ext4` 不受影響） |
 
 應用的網址是 `http://<名稱>.localhost:8700/`。

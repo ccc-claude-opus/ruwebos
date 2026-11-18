@@ -7,6 +7,7 @@
 #   ./ruwebos --accel tcg [url]     force an accelerator (default: hvf on macOS/arm64, kvm on Linux/aarch64, else tcg)
 #   ./ruwebos --qemu                boot in QEMU (qemu-system-aarch64, machine virt) instead of ruvm: same kernel and disks
 #   ./ruwebos --memory 8192         the VM's memory in MB (default 2048)
+#   ./ruwebos --keyboard always     rubrowser's on-screen keyboard: auto (after a touch; default), always, never
 # Uses ../ruvm and ../rubrowser (or RUVM=..., RUBROWSER=... checkouts, or RUBROWSER_BIN=<binary>); rubrowser is
 # built with audio and video (--features media, FFmpeg) into its target/media when FFmpeg is installed.
 # The system disk out/system.ext4 is built by image/build.sh on first use; the data disk out/data.ext4
@@ -17,7 +18,7 @@ now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
 since() { perl -e "printf '%.2f', $(now) - $1"; }
 t0=$(now)
 
-accel= mode=window shot= url=http://localhost:8700/ vm=ruvm memory=2048
+accel= mode=window shot= url=http://localhost:8700/ vm=ruvm memory=2048 keyboard=auto
 while [ $# -gt 0 ]; do
     case "$1" in
         --accel | -accel) accel=$2; shift ;;
@@ -26,7 +27,8 @@ while [ $# -gt 0 ]; do
         --test) mode=test ;;
         --qemu) vm=qemu ;;
         --memory) memory=$2; shift ;;
-        -h | --help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --keyboard) keyboard=$2; shift ;;
+        -h | --help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) echo "ruwebos: unknown option $1" >&2; exit 2 ;;
         *) url=$1 ;;
     esac
@@ -160,12 +162,12 @@ case $mode in
         wait $pid || true
         ;;
     screenshot)
-        "$rubrowser" --installer "$installer" --screenshot "$shot" --width 1280 --height 800 "$url"
+        "$rubrowser" --installer "$installer" --keyboard "$keyboard" --screenshot "$shot" --width 1280 --height 800 "$url"
         echo "ruwebos: $shot rendered $(since "$t0") s after the launch"
         poweroff
         ;;
     window)
-        "$rubrowser" --installer "$installer" "$url" || true
+        "$rubrowser" --installer "$installer" --keyboard "$keyboard" "$url" || true
         poweroff
         ;;
     test)

@@ -1,4 +1,4 @@
-# 觸控與虛擬鍵盤（規劃，待確認）
+# 觸控與虛擬鍵盤
 
 目標：同一套 ruwebos 在有觸控螢幕的裝置（例如樹莓派加觸控螢幕）上可以只用手指操作；沒有實體鍵盤時，點輸入框會從畫面下方升起虛擬鍵盤。沒有觸控的裝置照舊，不會看到任何差別。
 
@@ -65,6 +65,10 @@ rubrowser 的工具列（分頁、上一頁、網址列）也能用手指操作�
 | 4 | 自動判斷與 `--keyboard auto\|always\|never` | rubrowser、ruwebos 的啟動器 |
 | 5 | 測試：除錯輸入的觸控步驟、單元測試、截圖 | rubrowser |
 | 6 | 文件：rubrowser 的 README、ruwebos 的 doc | 兩個 repo |
+
+## 實作（2026-11-19，第一步完成）
+
+rubrowser 的 `src/browser/touch.rs`（手勢）與 `src/browser/osk.rs`（鍵盤）；`--keyboard auto|always|never`，ruwebos 的啟動器也有。單元測試涵蓋點擊的事件順序、拖動捲動與慣性、`touch-action`、取消觸控、長按、鍵盤的出現與消失、各種版面、Shift、實體鍵盤收起。用 `RUBROWSER_INPUT` 的 `tap`、`swipe`、`touch-down/move/up` 截圖確認過畫面。真正的觸控螢幕還沒在實機上測。
 
 ## 之後（第二步）
 
