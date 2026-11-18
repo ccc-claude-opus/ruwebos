@@ -10,7 +10,7 @@
 | Google 搜尋結果頁空白 | 首頁可以打字、按 Enter 送出，結果頁空白 | 結果頁先跑一段 JS 驗證，沒通過就以 `<noscript>` 的 meta refresh 導向「請啟用 JavaScript」 | 提升整體 JS 相容性；**不繞過**驗證 |
 | YouTube 只有灰色骨架 | 沒有影片、沒有文字 | `webcomponents-sd.js`（web components polyfill）第 102 行 `cannot convert 'null' or 'undefined' to object`；`spf.js` 的 `not a callable function` | 查 polyfill 用到的 `Object.getOwnPropertyDescriptor` 等；shadow DOM 的繪製 |
 | Gmail 空白 | `mail.google.com` 轉到 Google 登入頁後空白 | Google 登入對非主流瀏覽器另有限制 | 短期不列為目標 |
-| 棋藝軒標題與副標重疊 | 主標「經典棋類與桌遊對戰平台」疊在副標上 | 排版（行高或定位） | 找出對應的 CSS 做最小重現 |
+| 棋藝軒的「楚河 漢界」 | 字顯示在棋盤底部，不在河界中間 | 待查（定位或 grid） | 找出對應的 CSS 做最小重現 |
 | Open-Meteo 預報主機連不上 | 天氣頁顯示「連線逾時」 | 這裡的網路對 `api.open-meteo.com` 的 TLS 握手逾時 | 換網路再試 |
 
 ## rubrowser 尚缺的標準功能
