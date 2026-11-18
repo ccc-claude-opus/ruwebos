@@ -24,4 +24,22 @@
     save();
   });
   window.addEventListener('pagehide', save);
+
+  // 還沒有封面：畫面出來後用 canvas 擷取一格（寬 320 px，JPEG）送回去
+  if (v.hasAttribute('data-needs-poster')) {
+    v.addEventListener('loadeddata', function poster() {
+      v.removeEventListener('loadeddata', poster);
+      try {
+        var w = v.videoWidth, h = v.videoHeight;
+        if (!w || !h) return;
+        var c = document.createElement('canvas');
+        c.width = 320;
+        c.height = Math.max(1, Math.round((320 * h) / w));
+        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+        c.toBlob(function (blob) {
+          if (blob) fetch('/v/' + id + '/poster', { method: 'POST', headers: { 'content-type': blob.type || 'image/jpeg' }, body: blob }).catch(function () {});
+        }, 'image/jpeg', 0.8);
+      } catch (e) {}
+    });
+  }
 })();

@@ -76,7 +76,7 @@ sandbox = false
 
 [[app]]
 path = "videos"
-d1_init = { DB = "schema.sql" }
+d1_migrate = true
 allow_read = ["_shared"]
 sandbox = false
 

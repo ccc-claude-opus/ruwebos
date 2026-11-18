@@ -3,9 +3,11 @@
 //   GET  /v/:id                播放      POST /v/:id 改名      POST /v/:id/delete
 //   POST /v/:id/position       進度（表單 → 轉址；Accept: application/json → JSON）
 //   GET  /raw/:id              影片檔（Range；?download=1 下載）
-//   POST /upload               上傳（multipart，可多檔）
+//   GET  /p/:id  POST /v/:id/poster   封面（播放頁的 public/videos.js 用 canvas 擷取畫面送來）
+//   POST /upload               上傳（multipart，可多檔；長度與解析度從容器讀，src/probe.js）
 import { app, page, html, redirect, readForm, json, tzOf, fmt, newId, UserError } from '../../_shared/lib.js';
 import { serveObject, filesOf, size } from '../../_shared/r2.js';
+import { probe } from './probe.js';
 
 const APP = { name: '影片', color: '#7048e8' };
 const OWNER = 'me';
@@ -45,17 +47,19 @@ async function store(env, file) {
   else if (kind) type = type || kind;
   if (!kind || !type.startsWith('video/')) throw new UserError(`「${file.name}」不是支援的影片（MP4、WebM、MOV、MKV、Ogg）。`);
   const id = newId();
-  await env.MEDIA.put(`v/${id}`, await file.arrayBuffer(), { httpMetadata: { contentType: type } });
-  await env.DB.prepare('INSERT INTO videos (id, owner, title, name, type, size, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .bind(id, OWNER, file.name.replace(/\.[^.]+$/, '').slice(0, 200) || '影片', file.name.slice(0, 200), type, file.size, new Date().toISOString())
+  const bytes = await file.arrayBuffer();
+  const info = probe(bytes);
+  await env.MEDIA.put(`v/${id}`, bytes, { httpMetadata: { contentType: type } });
+  await env.DB.prepare('INSERT INTO videos (id, owner, title, name, type, size, duration, width, height, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(id, OWNER, file.name.replace(/\.[^.]+$/, '').slice(0, 200) || '影片', file.name.slice(0, 200), type, file.size, info.duration, info.width, info.height, new Date().toISOString())
     .run();
   return id;
 }
 
 function item(v) {
-  const sub = [size(v.size), v.duration ? hms(v.duration) : '', v.position > 0 ? `看到 ${hms(v.position)}` : ''].filter(Boolean).join(' · ');
+  const sub = [v.duration ? hms(v.duration) : '', v.height ? `${v.height}p` : '', size(v.size), v.position > 0 ? `看到 ${hms(v.position)}` : ''].filter(Boolean).join(' · ');
   const pct = v.duration > 0 ? Math.min(100, (v.position / v.duration) * 100) : 0;
-  return html`<li><a class="main" href="/v/${v.id}"><span class="icon">🎬</span><span class="grow"><strong>${v.title}</strong><span class="sub">${sub}</span>
+  return html`<li><a class="main" href="/v/${v.id}">${v.has_poster ? html`<img src="/p/${v.id}" alt="" style="flex:none;width:96px;height:54px;object-fit:cover;border-radius:6px;background:#000">` : html`<span class="icon" style="width:96px">🎬</span>`}<span class="grow"><strong>${v.title}</strong><span class="sub">${sub}</span>
 ${pct > 0 ? html`<span style="display:block;height:4px;background:var(--hover);border-radius:2px;margin-top:4px"><span style="display:block;height:4px;width:${pct.toFixed(1)}%;background:var(--app);border-radius:2px"></span></span>` : ''}</span></a></li>`;
 }
 
@@ -86,9 +90,9 @@ function player(request, v) {
     title: v.title,
     back: '/',
     body: html`
-<video id="player" controls preload="metadata" src="/raw/${v.id}${start ? `#t=${start}` : ''}" data-id="${v.id}" data-start="${String(start)}" style="width:100%;max-height:70vh;background:#000;border-radius:var(--radius)"></video>
+<video id="player" controls preload="metadata" src="/raw/${v.id}${start ? `#t=${start}` : ''}"${v.has_poster ? html` poster="/p/${v.id}"` : html` data-needs-poster`}${v.width ? html` width="${v.width}" height="${v.height}"` : ''} data-id="${v.id}" data-start="${String(start)}" style="width:100%;max-height:70vh;background:#000;border-radius:var(--radius)"></video>
 <h2>${v.title}</h2>
-<p class="muted small">${[size(v.size), v.type, v.duration ? hms(v.duration) : '', `上傳於 ${fmt(v.created_at, tz)}`, v.position > 0 ? `看到 ${hms(v.position)}` : ''].filter(Boolean).join(' · ')}</p>
+<p class="muted small">${[size(v.size), v.type, v.duration ? hms(v.duration) : '', v.width ? `${v.width}×${v.height}` : '', `上傳於 ${fmt(v.created_at, tz)}`, v.position > 0 ? `看到 ${hms(v.position)}` : ''].filter(Boolean).join(' · ')}</p>
 <div class="row">
   <a class="btn" href="/raw/${v.id}?download=1" download>下載</a>
   ${v.position > 0 ? html`<form class="inline" method="post" action="/v/${v.id}/position"><input type="hidden" name="position" value="0"><button type="submit">從頭看</button></form>` : ''}
@@ -106,6 +110,8 @@ export default app(APP, async (request, env, url) => {
     if (p === '/') return home(request, env);
     let m = /^\/v\/(\w+)$/.exec(p);
     if (m) return player(request, await get(env.DB, m[1]));
+    m = /^\/p\/(\w+)$/.exec(p);
+    if (m) return serveObject(request, env.MEDIA, `p/${m[1]}`);
     m = /^\/raw\/(\w+)$/.exec(p);
     if (m) {
       const v = await env.DB.prepare('SELECT title, type FROM videos WHERE id = ? AND owner = ?').bind(m[1], OWNER).first();
@@ -122,10 +128,21 @@ export default app(APP, async (request, env, url) => {
     for (const f of files) last = await store(env, f);
     return redirect(files.length === 1 ? `/v/${last}` : '/');
   }
-  const m = /^\/v\/(\w+)(\/delete|\/position)?$/.exec(p);
+  const m = /^\/v\/(\w+)(\/delete|\/position|\/poster)?$/.exec(p);
   if (!m) return null;
   const v = await get(env.DB, m[1]);
+  if (m[2] === '/poster') {
+    // 瀏覽器用 canvas 擷取的一格（JPEG 或 PNG，最大 512 KB）
+    const bytes = new Uint8Array(await request.arrayBuffer());
+    const jpeg = bytes[0] === 0xff && bytes[1] === 0xd8;
+    const png = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+    if (bytes.length > 512 * 1024 || !(jpeg || png)) return json({ error: '封面要是 512 KB 以內的 JPEG 或 PNG' }, 400);
+    await env.MEDIA.put(`p/${v.id}`, bytes, { httpMetadata: { contentType: jpeg ? 'image/jpeg' : 'image/png' } });
+    await env.DB.prepare('UPDATE videos SET has_poster = 1 WHERE id = ? AND owner = ?').bind(v.id, OWNER).run();
+    return json({ ok: true });
+  }
   if (m[2] === '/delete') {
+    await env.MEDIA.delete(`p/${v.id}`);
     await env.MEDIA.delete(`v/${v.id}`);
     await env.DB.prepare('DELETE FROM videos WHERE id = ? AND owner = ?').bind(v.id, OWNER).run();
     return redirect('/');

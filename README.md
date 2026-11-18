@@ -45,6 +45,8 @@ git clone https://github.com/ccc-claude-opus/ruwebos
 (cd rubrowser && cargo build --release)
 ```
 
+要播放影音，另外裝 FFmpeg 8（例如 `brew install ffmpeg`）；啟動器第一次執行時會自動建一個有影音功能的 rubrowser（`--features media`，放在 `rubrowser/target/media`，約 3～4 分鐘）。
+
 下載 Debian 13 的 arm64 核心，並產生 ruvm 的 initramfs（載入 virtio 與 ext4 模組、掛載系統碟）：
 
 ```bash
@@ -111,4 +113,6 @@ cd ruwebos && ./ruwebos
 
 ## 授權
 
-MIT
+MIT。系統碟裡每個套件的授權見 [doc/licenses.md](doc/licenses.md)。
+
+本 repo 沒有包含也沒有連結 FFmpeg。有影音功能的 rubrowser 會連結機器上的 FFmpeg：自己建置使用沒有額外義務；如果要**散布**這樣的 rubrowser 執行檔，就要遵守那份 FFmpeg 的授權——Homebrew 的 FFmpeg 是 GPL 版（含 x264），執行檔要依 GPL 條款散布；改用只含 LGPL 部分的 FFmpeg（不加 `--enable-gpl`，播放只需要它內建的解碼器）並動態連結，就能照 MIT 散布，附上 FFmpeg 的授權聲明與原始碼取得方式即可。ruwebos 與 rubrowser 的原始碼都維持 MIT。

@@ -5,7 +5,8 @@
 #   ./ruwebos --screenshot home.png boot, render the home screen with rubrowser to a PNG, power off
 #   ./ruwebos --test                boot, run every app's test (apps/*/test.mjs) through the port forward, power off
 #   ./ruwebos --accel tcg [url]     force an accelerator (default: hvf on macOS/arm64, kvm on Linux/aarch64, else tcg)
-# Uses ../ruvm and ../rubrowser (or RUVM=..., RUBROWSER=... checkouts, or RUBROWSER_BIN=<binary>).
+# Uses ../ruvm and ../rubrowser (or RUVM=..., RUBROWSER=... checkouts, or RUBROWSER_BIN=<binary>); rubrowser is
+# built with audio and video (--features media, FFmpeg) into its target/media when FFmpeg is installed.
 # The system disk out/system.ext4 is built by image/build.sh on first use; the data disk out/data.ext4
 # (DATA_SIZE, default 512m) is created empty and formatted by the system on first boot.
 set -e
@@ -21,7 +22,7 @@ while [ $# -gt 0 ]; do
         --headless) mode=headless ;;
         --screenshot) mode=screenshot shot=$2; shift ;;
         --test) mode=test ;;
-        -h | --help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) echo "ruwebos: unknown option $1" >&2; exit 2 ;;
         *) url=$1 ;;
     esac
@@ -39,12 +40,20 @@ ruvm_dir=${RUVM:-../ruvm}
 ruvm=$ruvm_dir/target/release/ruvm
 [ -x "$ruvm" ] || { echo "ruwebos: $ruvm not found; build it (cargo build --release in $ruvm_dir)" >&2; exit 1; }
 if [ "$mode" = window ] || [ "$mode" = screenshot ]; then
+    # rubrowser with audio and video (feature `media`, FFmpeg) in its own target dir; built once when
+    # FFmpeg's libraries are installed, else the plain release build (media elements then report an error)
     rb_dir=${RUBROWSER:-../rubrowser}
     rubrowser=${RUBROWSER_BIN:-}
-    for b in "$rb_dir/target/release/rubrowser" "$rb_dir/target/debug/rubrowser" "$(command -v rubrowser || true)"; do
+    media=$rb_dir/target/media/release/rubrowser
+    if [ -z "$rubrowser" ] && [ ! -x "$media" ] && [ -f "$rb_dir/Cargo.toml" ] && pkg-config --exists libavcodec libavformat 2>/dev/null; then
+        echo "ruwebos: building rubrowser with audio and video (once, a few minutes)"
+        (cd "$rb_dir" && cargo build -q --release --features media --target-dir target/media) || true
+    fi
+    for b in "$media" "$rb_dir/target/release/rubrowser" "$rb_dir/target/debug/rubrowser" "$(command -v rubrowser || true)"; do
         [ -z "$rubrowser" ] && [ -x "$b" ] && rubrowser=$b
     done
-    [ -n "$rubrowser" ] || { echo "ruwebos: rubrowser not found; build it (cargo build in $rb_dir) or set RUBROWSER_BIN" >&2; exit 1; }
+    [ -n "$rubrowser" ] || { echo "ruwebos: rubrowser not found; build it (cargo build --release in $rb_dir) or set RUBROWSER_BIN" >&2; exit 1; }
+    [ "$rubrowser" = "$media" ] || echo "ruwebos: $rubrowser cannot play audio or video (install FFmpeg 8, e.g. brew install ffmpeg: the next launch builds it)" >&2
 fi
 [ -f out/system.ext4 ] || image/build.sh
 [ -f out/data.ext4 ] || dd if=/dev/zero of=out/data.ext4 bs=1 count=0 seek="${DATA_SIZE:-512m}" 2>/dev/null

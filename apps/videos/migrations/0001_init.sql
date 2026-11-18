@@ -1,4 +1,4 @@
--- 影片（每次啟動都會執行，所以只用 IF NOT EXISTS）
+-- 影片的資料表（rucloud 開機時依檔名順序套用尚未套用的 migrations）
 CREATE TABLE IF NOT EXISTS videos (
   id TEXT PRIMARY KEY,
   owner TEXT NOT NULL DEFAULT 'me',

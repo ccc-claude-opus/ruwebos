@@ -44,9 +44,22 @@ rubrowser 的 `document.cookie` 只存在頁面裡、不會送到伺服器，所
 * **`table-layout: fixed`**（CSS 2.1 §17.5.2.1）：表格的寬度與第一列各格的寬度（px 或 %）決定欄寬，其餘欄平分，不看內容。
 * 192 個測試全部通過，clippy 沒有警告。
 
+## 影音的改善
+
+| 項目 | 做法 | 結果 |
+|---|---|---|
+| rubrowser 能播影音 | 啟動器在有 FFmpeg 時自動建一個 `--features media` 的 rubrowser（`rubrowser/target/media`，約 3～4 分鐘，只建一次），之後優先用它 | 影片、音樂都經 HTTP 的 Range 從 VM 串流播放 |
+| 從上次的位置繼續 | rubrowser 實作媒體片段 `#t=`（Media Fragments URI 1.0 的時間維度）；跳轉後立刻顯示那個時間點的畫面 | 測試頁 `#t=4` 顯示第 96 格（24 fps × 4 秒），`currentTime` 4.00 |
+| 影片封面 | rubrowser 的 canvas `drawImage` 接受 `<video>`；影片播放頁在沒有封面時擷取一格（寬 320 px）送回伺服器 | 兩部示範影片都有了封面 |
+| 播放前就知道長度與解析度 | 上傳時從容器讀：MP4／MOV 的 `mvhd`、`tkhd`，MKV／WebM 的 EBML（Segment Info、Tracks）；影片資料表改用 D1 migrations 加欄位 | ffmpeg 產生的 MP4（moov 在前與在後）、MOV、MKV、WebM 都讀對 |
+
+![影片清單（封面、長度、解析度）與從 0:05 繼續的播放頁](videos.png)
+
+授權：ruwebos 沒有包含或連結 FFmpeg；有影音功能的 rubrowser 連結機器上的 FFmpeg，散布那樣的執行檔時要遵守該 FFmpeg 的授權（見 README 的「授權」）。
+
 ## 已知問題與後續
 
 * **Open-Meteo 的預報主機**（`api.open-meteo.com`）從這裡的網路連不上（TLS 握手逾時；同一家的地理編碼主機正常），天氣頁顯示「無法取得天氣資料：連線逾時」。應用照常運作，連得上時就會有資料。
-* **影片與音樂在 rubrowser 裡播放**要用 `media` feature 建置（FFmpeg）；預設的 release 版只有控制列。
+* ~~影片與音樂在 rubrowser 裡播放~~：已解決，見上面的「影音的改善」。
 * **「檔案」裡的虛擬資料夾**（在檔案總管看到相簿、音樂）還沒做；目前是相簿可以從「檔案」加入照片。
 * 縮圖沒有依 EXIF 方向轉正（看瀏覽器畫 `<img>` 時是否套用 `image-orientation: from-image`）。

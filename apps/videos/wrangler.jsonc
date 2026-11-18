@@ -1,9 +1,9 @@
-// 影片：影片檔（R2）、清單與看到哪裡（D1）；播放頁會記住進度，下次從那裡繼續
+// 影片：影片檔與封面（R2）、清單與看到哪裡（D1，migrations/）；播放頁會記住進度，下次從那裡繼續
 {
   "name": "videos",
   "main": "src/worker.js",
   "compatibility_date": "2025-11-16",
   "assets": { "directory": "./public" },
-  "d1_databases": [{ "binding": "DB", "database_name": "videos", "database_id": "videos" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "videos", "database_id": "videos", "migrations_dir": "migrations" }],
   "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "videos" }]
 }

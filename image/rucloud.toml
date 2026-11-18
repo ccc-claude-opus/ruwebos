@@ -70,7 +70,7 @@ allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
 path = "/opt/ruwebos/apps/videos"
-d1_init = { DB = "schema.sql" }
+d1_migrate = true
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
