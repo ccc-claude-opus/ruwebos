@@ -1,4 +1,4 @@
-# 讓更多 Cloudflare 應用能安裝（規劃，待確認）
+# 讓更多 Cloudflare 應用能安裝（規劃）
 
 目前安裝的應用能用的 Cloudflare 服務是 D1、KV、R2、Durable Objects、Vectorize 與排程（cron）；Workers AI、Queues、Email 等還不能用，需要先建置（npm）的專案也要先處理（見 [cloudflare-apps.md](cloudflare-apps.md)）。這份文件規劃怎麼放寬。
 
@@ -35,7 +35,6 @@
 | 項目 | 做法 | 會多出來能裝的（候選清單裡的例子） |
 |---|---|---|
 | Queues、Analytics Engine、Workflows 各自一份 | rucloud 把安裝的應用的佇列、dataset、workflow 名稱加上應用名稱前綴，只能存取自己的；移除時一起清掉 | microfeed（Queues）、CloudPaste（Workflows）、Counterscale（Analytics Engine） |
-| Workers AI 成為權限 `ai` | 使用者同意後才有 `env.AI`；AI 後端在「設定」裡選（主機上的 Ollama 等本機模型，或使用者自己的 API 金鑰）；每個應用有用量統計與上限 | Inkstone、FlareMo、Sink（AI 產生短網址） |
 | Hyperdrive 隨 `network` 權限 | 連線字串由使用者在安裝時填（不是讀伺服器的設定） | FeedLog 這類要外部 PostgreSQL 的 |
 
 ### 第 3 步：建置與寄信
@@ -49,12 +48,14 @@
 
 ### 之後（較大或需要外部條件）
 
+* **Workers AI**（暫不做，2026-11-19 決定）：做法會是成為權限 `ai`，使用者同意後才有 `env.AI`，AI 後端在「設定」裡選（本機模型或使用者自己的 API 金鑰），每個應用有用量統計與上限。會多出來能裝的：Inkstone、FlareMo、Sink（AI 產生短網址）。
+
 * **在系統裡建置**：在虛擬機裡用獨立的使用者或容器跑 `npm ci --ignore-scripts` 與建置；建置程式會執行第三方程式碼，要先想清楚隔離。
 * **收信（Email Routing）**：ruwebos 放在有公開網域的伺服器上，或透過 Cloudflare Email Routing 轉送進來。
 * **Browser Rendering**（在虛擬機裡跑 headless Chromium）、**Containers**（容器執行環境）：需要的資源大，等有明確需要的應用再做。
 
-## 要你決定的
+## 決定（2026-11-19）
 
-1. 優先順序：照上面第 1、2、3 步？
-2. Workers AI 的後端：只接主機上的本機模型（例如 Ollama），還是也讓使用者填雲端服務的 API 金鑰？
-3. 寄信：要不要做（需要使用者提供 SMTP 帳號）？
+1. 照第 1、2、3 步的順序。
+2. Workers AI 先不做（列在「之後」）。
+3. 寄信列入第 3 步（透過使用者在「設定」填的 SMTP 帳號）。
