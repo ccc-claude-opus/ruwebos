@@ -1,8 +1,8 @@
 # 讓更多 Cloudflare 應用能安裝（規劃）
 
-目前安裝的應用能用的 Cloudflare 服務是 D1、KV、R2、Durable Objects、Vectorize 與排程（cron）；Workers AI、Queues、Email 等還不能用，需要先建置（npm）的專案也要先處理（見 [cloudflare-apps.md](cloudflare-apps.md)）。這份文件規劃怎麼放寬。
+安裝的應用原本能用的 Cloudflare 服務是 D1、KV、R2、Durable Objects、Vectorize 與排程（cron）；Workers AI、Queues、Email 等不能用（Queues 與 Workflows 已在第 2 步開放），需要先建置（npm）的專案也要先處理（見 [cloudflare-apps.md](cloudflare-apps.md)）。這份文件規劃怎麼放寬。
 
-## 現況：兩種不同的原因
+## 規劃時的現況：兩種不同的原因
 
 | 服務 | rucloud 本身 | 安裝的應用 | 為什麼不能用 |
 |---|---|---|---|
@@ -54,9 +54,9 @@ ruwebos 是**一個人用的私人裝置**，應用只在本機（`localhost`）
 | 已經建置好的套件 | 安裝 GitHub 儲存庫時，先找最新 Release 裡的 `*.ruwebos.tar.gz`；作者用 `wrangler deploy --dry-run --outdir` 打包的建置結果（已經把 node_modules 打包進去）也接受 |
 | 給作者的說明與 GitHub Action | 文件說明怎麼讓應用能裝進 ruwebos（宣告套件、描述檔、只用支援的服務），附一個 GitHub Action 範本：每次發佈時自動建置、打包、附在 Release 上 |
 
-### 第 2 步：Queues 與 Workflows 各自一份（rucloud）
+### 第 2 步：Queues 與 Workflows 各自一份（rucloud）——2026-11-19 完成
 
-rucloud 把安裝的應用的佇列與 workflow 名稱加上應用名稱前綴，只能存取自己的；移除應用時一起清掉。會多出來能裝的例子：microfeed（Queues）、CloudPaste（Workflows）。
+已做：rucloud 把安裝的應用的佇列名稱加上應用名稱前綴（`<應用>:<佇列>`，包括 dead letter queue 與 R2 事件通知），Worker 只能送到自己有生產者綁定的佇列；workflow 本來就是每個應用一份（`<state>/<應用>/workflows.sqlite`），安裝的應用也會跑 workflow；移除應用並刪除資料時，佇列裡的訊息一起清掉。安裝程式不再拒絕用到 Queues、Workflows 的專案。`[dynamic]` 的應用仍然不能用。會多出來能裝的例子：microfeed（Queues）、CloudPaste（Workflows）。
 
 ### 第 3 步：建置、Images 與寄信
 

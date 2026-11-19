@@ -93,11 +93,9 @@ export function unsupportedBindings(cfg) {
   if (!cfg) return [];
   const names = {
     services: 'service bindings',
-    queues: 'Queues',
     ai: 'Workers AI',
     analytics_engine_datasets: 'Analytics Engine',
     hyperdrive: 'Hyperdrive',
-    workflows: 'Workflows',
     send_email: 'Email',
     browser: 'Browser Rendering',
     containers: 'Containers',

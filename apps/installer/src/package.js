@@ -253,7 +253,7 @@ export async function readPackage(gz) {
 
 /** wrangler.toml 裡用到的、安裝的應用不能用的綁定（粗略：看表格的名稱）。 */
 function tomlUnsupported(text) {
-  const names = { services: 'service bindings', queues: 'Queues', ai: 'Workers AI', analytics_engine_datasets: 'Analytics Engine', hyperdrive: 'Hyperdrive', workflows: 'Workflows', send_email: 'Email', browser: 'Browser Rendering', containers: 'Containers', images: 'Images' };
+  const names = { services: 'service bindings', ai: 'Workers AI', analytics_engine_datasets: 'Analytics Engine', hyperdrive: 'Hyperdrive', send_email: 'Email', browser: 'Browser Rendering', containers: 'Containers', images: 'Images' };
   const found = new Set();
   for (const m of text.matchAll(/^\s*\[\[?\s*([a-z_]+)(?:\.[a-z_]+)?\s*\]\]?/gm)) if (names[m[1]]) found.add(names[m[1]]);
   return [...found];

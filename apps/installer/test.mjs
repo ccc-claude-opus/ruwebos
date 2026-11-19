@@ -71,10 +71,15 @@ export default async function (t) {
   t.ok((await t.post('/install', { token: tok })).status === 400, 'a license is required');
   t.ok((await t.submit('/install', { token: tok, license: 'LicenseRef-custom' })).endsWith('/apps/test-odd'), 'installed with the given license');
   await t.page('/apps/test-odd', 'LicenseRef-custom');
-  up = await upload('test-queue', await project('test-queue', mit, '"queues": { "producers": [{ "binding": "Q", "queue": "q" }] },'));
+  // Queues 與 Workflows 可以用（rucloud 替佇列名稱加上應用名稱前綴）
+  up = await upload('test-queue', await project('test-queue', mit, '"queues": { "producers": [{ "binding": "Q", "queue": "q" }], "consumers": [{ "queue": "q" }] },'));
+  t.ok(up.status === 303, `queue upload: ${up.status}`);
+  tok = /token=(\w+)/.exec(up.headers.get('location'))[1];
+  t.ok((await t.submit('/install', { token: tok })).endsWith('/apps/test-queue'), 'queue app installed');
+  up = await upload('test-ai', await project('test-ai', mit, '"ai": { "binding": "AI" },'));
   const refused = await up.text();
-  t.ok(up.status === 400 && refused.includes('Queues'), `unsupported binding: ${up.status}`);
-  for (const id of ['test-plain', 'test-odd']) t.ok((await t.post(`/apps/${id}/remove`, { data: 'purge' })).status === 303, `remove ${id}`);
+  t.ok(up.status === 400 && refused.includes('Workers AI'), `unsupported binding: ${up.status}`);
+  for (const id of ['test-plain', 'test-odd', 'test-queue']) t.ok((await t.post(`/apps/${id}/remove`, { data: 'purge' })).status === 303, `remove ${id}`);
 
   // 收尾：移除應用（含資料），檔案搬到垃圾桶再清掉
   t.ok((await remove()).status === 303, 'removed');

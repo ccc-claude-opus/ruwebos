@@ -70,7 +70,7 @@ sequenceDiagram
 | `icon`、`color`、`glyph` | 主畫面的圖示（SVG、PNG、WebP、JPEG，256 KB 以內）；沒有圖示時用 `color` 底加 `glyph` 字 |
 | `description`、`author`、`source`、`homepage` | 顯示用 |
 
-`.dev.vars`、`.env`、`.git`、`node_modules` 不會被裝進去；套件解開後上限 200 MB（下載 50 MB）。套件自己的 wrangler 設定裡不能有 `services`、`queues`、`ai`、`analytics_engine_datasets`、`hyperdrive`、`workflows`（會碰到其他應用或伺服器的資源）；D1、KV、R2、Durable Objects、cron 都可以用，資料都是這個應用自己的。
+`.dev.vars`、`.env`、`.git`、`node_modules` 不會被裝進去；套件解開後上限 200 MB（下載 50 MB）。套件自己的 wrangler 設定裡不能有 `services`、`ai`、`analytics_engine_datasets`、`hyperdrive`（會碰到其他應用或伺服器的資源）；D1、KV、R2、Durable Objects、Vectorize、cron、Queues、Workflows 都可以用，資料都是這個應用自己的（佇列名稱由 rucloud 加上應用名稱前綴，別的應用碰不到）。
 
 ## 權限
 
