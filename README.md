@@ -91,6 +91,22 @@ flowchart TB
 
 ## 快速開始
 
+### 直接用：`cargo install`
+
+需要 Apple Silicon 的 macOS（或 ARM Linux 加 KVM；其他平台可用較慢的直譯器）與 Rust：
+
+```bash
+cargo install ruvm ruwebos
+```
+
+```bash
+ruwebos
+```
+
+第一次會從 GitHub Release 下載這個版本的核心、initramfs 與系統碟（約 100 MB），比對 `SHA256SUMS` 後開機，並用瀏覽器開主畫面；結束瀏覽器就關機。你的資料在另外一顆資料碟，換版本也留著（`ruwebos --where` 顯示放在哪裡）。啟動器的原始碼與選項見 [launcher/](launcher/README.md)。
+
+### 從原始碼建置
+
 需要：Apple Silicon 的 macOS（或 ARM Linux 加 KVM；其他平台可用較慢的直譯器）、Docker、Rust 與 [cargo-zigbuild](https://github.com/rust-cross/cargo-zigbuild)。四個 repo 放在同一層：
 
 ```bash
@@ -198,6 +214,7 @@ rucloud 的範例應用 myshop、friendbook、markpedia、music、boardgame、we
 * [doc/install.md](doc/install.md)：軟體安裝（套件、權限、安裝程式），以及怎麼寫可以安裝的應用
 * [doc/native.md](doc/native.md)：不用虛擬機，直接安裝在 Linux 上（`native/`）
 * [doc/todo.md](doc/todo.md)：待辦與已知問題
+* [doc/release.md](doc/release.md)：發佈新版本（GitHub Release 的檔案與 crates.io 上的啟動器）
 
 開發應用時可以不經 VM，直接在主機上跑：先 `node image/gen-home.mjs ../rucloud` 與 `node image/gen-packages.mjs ../rucloud`，再 `rucloud serve $PWD/apps/dev.toml`（主畫面 `http://localhost:8790/`），測試用 `node apps/test.mjs http://localhost:8790`。
 

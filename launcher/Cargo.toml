@@ -1,0 +1,16 @@
+[package]
+name = "ruwebos"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Launcher for ruwebos, a small OS whose user interface is the web browser: downloads the system image, boots it in ruvm and opens a browser"
+repository = "https://github.com/ccc-claude-opus/ruwebos"
+readme = "README.md"
+keywords = ["os", "vm", "browser", "cloudflare-workers"]
+categories = ["command-line-utilities", "emulators"]
+
+[dependencies]
+ctrlc = "3"
+ruzstd = "0.8"
+sha2 = "0.10"
+ureq = "3"
