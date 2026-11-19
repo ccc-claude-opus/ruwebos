@@ -13,7 +13,7 @@
 //   GET  /api/apps               安裝的應用（設定用）
 import { app, page, html, redirect, readForm, json, newId, UserError } from '../../_shared/lib.js';
 import { PERMS, grantsFor } from './perms.js';
-import { download, readPackage, packFiles, compareVersions, resolveSource } from './package.js';
+import { download, readPackage, packFiles, compareVersions, resolveSource, MAX_DOWNLOAD } from './package.js';
 
 const APP = { name: '安裝程式', color: '#2b8a3e' };
 const now = () => new Date().toISOString();
@@ -93,7 +93,7 @@ async function prepare(env, source, { bytes, origin = 'user', page: from = null,
   await env.PKG.put(`pending/${token}`, await packFiles(pkg.files));
   if (pkg.icon) await env.PKG.put(`pending/${token}.icon`, pkg.icon.data, { httpMetadata: { contentType: pkg.icon.type } });
   await env.DB.prepare('INSERT INTO pending (token, manifest, source, origin, created_at) VALUES (?, ?, ?, ?, ?)')
-    .bind(token, JSON.stringify({ ...pkg.manifest, has_icon: !!pkg.icon, page: from, download: url }), source, origin, now())
+    .bind(token, JSON.stringify({ ...pkg.manifest, has_icon: !!pkg.icon, page: from, download: url, license_text: pkg.licenseText ? pkg.licenseText.slice(0, 4000) : '' }), source, origin, now())
     .run();
   return token;
 }
@@ -101,10 +101,18 @@ async function prepare(env, source, { bytes, origin = 'user', page: from = null,
 const randomSecret = () => [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('');
 
 /** 把暫存的套件交給 rucloud，設密鑰與權限，記下來。 */
-async function commit(env, token, granted) {
+async function commit(env, token, granted, license = '') {
   const p = await env.DB.prepare('SELECT * FROM pending WHERE token = ?').bind(token).first();
   if (!p) throw new UserError('這個安裝要求已經過期，請重新開始。');
   const m = JSON.parse(p.manifest);
+  if (!m.license) {
+    // 授權檔認不出來：使用者看過授權檔後填的 SPDX 名稱
+    license = String(license).trim();
+    if (!/^[A-Za-z0-9.+\-() ]{2,100}$/.test(license) || /^(unlicensed|none|proprietary)$/i.test(license)) {
+      throw new UserError('請填這個專案的授權（SPDX 名稱，例如 MIT、Apache-2.0）；沒有可用授權的專案不能安裝。');
+    }
+    m.license = license;
+  }
   const obj = await env.PKG.get(`pending/${token}`);
   if (!obj) throw new UserError('暫存的套件不見了，請重新開始。');
   const before = await getApp(env, m.id);
@@ -204,6 +212,10 @@ async function home(request, env) {
   <input name="src" type="url" required placeholder="套件、宣告了套件的網頁，或 GitHub 儲存庫的網址" style="flex:1" aria-label="網址">
   <button class="primary" type="submit">安裝</button>
 </form>
+<form class="row card" method="post" action="/install/upload" enctype="multipart/form-data">
+  <label style="flex:1">或上傳套件檔（.tar.gz）<input type="file" name="file" accept=".gz,.tgz,application/gzip" required></label>
+  <button type="submit">上傳並安裝</button>
+</form>
 <p class="muted small">網站要能安裝，需要在網頁裡宣告套件：<code>&lt;link rel="ruwebos-app" href="app.tar.gz"&gt;</code>。只有網址的網站請加到<a href="/favorites">我的最愛</a>。</p>
 <p class="section">已安裝的應用（${apps.length}）</p>
 ${apps.length
@@ -229,10 +241,11 @@ async function consent(request, env, token) {
     body: html`
 <div class="card row" style="gap:14px">${m.has_icon ? html`<img class="icon" src="/install/icon?token=${token}" alt="" width="56" height="56" style="border-radius:22%">` : icon({ ...m, has_icon: false }, 56)}
 <div class="grow"><h2 style="margin:0">${m.name}</h2>
-<span class="muted small">${m.id}.localhost · 版本 ${m.version}${cur ? `（目前 ${cur.version}）` : ''} · 授權 ${m.license}${m.author ? ` · ${m.author}` : ''}</span></div></div>
+<span class="muted small">${m.id}.localhost · 版本 ${m.version}${cur ? `（目前 ${cur.version}）` : ''} · 授權 ${m.license || '待確認'}${m.author ? ` · ${m.author}` : ''}</span></div></div>
 ${m.description ? html`<p>${m.description}</p>` : ''}
+${m.generated ? html`<p class="muted small">這個專案沒有 ruwebos 的描述檔（ruwebos-app.json），名稱、版本與授權是從它的 wrangler 設定、package.json 與授權檔自動產生的。</p>` : ''}
 <table>
-  <tr><th>來源</th><td>${p.source.startsWith('bundled:') ? '系統碟裡的預裝套件' : p.source}</td></tr>
+  <tr><th>來源</th><td>${p.source.startsWith('bundled:') ? '系統碟裡的預裝套件' : p.source.startsWith('upload:') ? `上傳的套件檔 ${p.source.slice(7)}` : p.source}</td></tr>
   ${m.source ? html`<tr><th>原始碼</th><td><a href="${m.source}">${m.source}</a></td></tr>` : ''}
   ${m.homepage ? html`<tr><th>網站</th><td><a href="${m.homepage}">${m.homepage}</a></td></tr>` : ''}
 </table>
@@ -240,9 +253,14 @@ ${cur && cmp < 0 ? html`<p class="error">這個套件的版本比已安裝的舊
 ${cur && cmp === 0 ? html`<p class="muted">版本和已安裝的相同，會重新安裝。</p>` : ''}
 <form class="stack" method="post" action="/install">
   <input type="hidden" name="token" value="${token}">
+  ${m.license ? '' : html`<h3>授權</h3>
+  <p>認不出這個專案的授權檔是哪一種授權。請看過下面的內容，填上它的 SPDX 名稱（例如 MIT、Apache-2.0、GPL-3.0-or-later）：</p>
+  <pre style="max-height:220px;overflow:auto;white-space:pre-wrap;font-size:13px" class="card">${m.license_text}</pre>
+  <label>授權<input name="license" required maxlength="100" placeholder="MIT"></label>`}
   <h3>${update ? '更新後的權限' : '這個應用要求的權限'}</h3>
   <p class="muted small">取消勾選的權限不會給；之後可以在這裡的應用頁面給或收回。應用在沒有權限時應該仍可使用，只是少了那些功能。</p>
-  ${permList(m.permissions, { checked: update ? [...was, ...fresh] : m.permissions, fresh })}
+  ${m.generated ? html`<p class="muted small">自動產生的描述不知道這個應用真正需要什麼，所以預設都不勾；應用若需要，之後可以在應用頁面給。</p>` : ''}
+  ${permList(m.permissions, { checked: update ? [...was, ...fresh] : m.generated ? [] : m.permissions, fresh })}
   <p class="muted small">安裝的應用在自己的沙箱裡執行，有自己的資料；不能讀寫系統的檔案，也不能直接連到這台裝置上的其他應用。</p>
   <div class="row"><button class="primary" type="submit">${update ? '更新' : '安裝'}</button><a class="btn" href="/">取消</a></div>
 </form>`,
@@ -268,7 +286,7 @@ async function detail(request, env, id) {
 ${a.description ? html`<p>${a.description}</p>` : ''}
 <table>
   <tr><th>網址</th><td><a href="${appUrl(request, a.id)}">${appUrl(request, a.id)}</a></td></tr>
-  <tr><th>來源</th><td>${a.source.startsWith('bundled:') ? '系統碟裡的預裝套件' : a.source}</td></tr>
+  <tr><th>來源</th><td>${a.source.startsWith('bundled:') ? '系統碟裡的預裝套件' : a.source.startsWith('upload:') ? `上傳的套件檔 ${a.source.slice(7)}` : a.source}</td></tr>
   ${a.homepage ? html`<tr><th>網站</th><td><a href="${a.homepage}">${a.homepage}</a></td></tr>` : ''}
   ${a.author ? html`<tr><th>作者</th><td>${a.author}</td></tr>` : ''}
   <tr><th>安裝於</th><td>${a.installed_at.slice(0, 10)}${a.updated_at !== a.installed_at ? `，更新於 ${a.updated_at.slice(0, 10)}` : ''}</td></tr>
@@ -280,7 +298,7 @@ ${a.description ? html`<p>${a.description}</p>` : ''}
 </form>
 <h3>版本</h3>
 <div class="row">
-  ${a.source.startsWith('bundled:') ? '' : html`<form class="inline" method="post" action="/apps/${a.id}/update"><button type="submit">檢查更新</button></form>`}
+  ${/^(bundled|upload):/.test(a.source) ? '' : html`<form class="inline" method="post" action="/apps/${a.id}/update"><button type="submit">檢查更新</button></form>`}
   ${versions.length > 1 ? html`<form class="inline" method="post" action="/apps/${a.id}/rollback" data-confirm="回到上一個版本？資料不會改變。"><button type="submit">回到上一版</button></form>` : ''}
   <a class="btn danger" href="/apps/${a.id}/remove">移除</a>
 </div>`,
@@ -424,8 +442,15 @@ export default app(APP, async (request, env, url, ctx) => {
   }
   if (request.method !== 'POST') return null;
   const form = await readForm(request);
+  if (p === '/install/upload') {
+    const file = [].concat(form.file || []).find((f) => typeof f === 'object' && f.size > 0);
+    if (!file) throw new UserError('沒有選擇套件檔。');
+    if (file.size > MAX_DOWNLOAD) throw new UserError(`套件太大（上限 ${MAX_DOWNLOAD / 1048576} MB）`);
+    const name = String(file.name || 'package.tar.gz').split(/[\\/]/).pop().slice(0, 200);
+    return redirect(`/install?token=${await prepare(env, `upload:${name}`, { bytes: new Uint8Array(await file.arrayBuffer()) })}`);
+  }
   if (p === '/install') {
-    const m2 = await commit(env, String(form.token || ''), list(form.perm));
+    const m2 = await commit(env, String(form.token || ''), list(form.perm), form.license || '');
     return redirect(`/apps/${m2.id}`);
   }
   if ((m = /^\/apps\/([a-z0-9-]+)\/(perms|update|rollback|remove)$/.exec(p))) {

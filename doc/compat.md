@@ -44,7 +44,9 @@ ruwebos 是**一個人用的私人裝置**，應用只在本機（`localhost`）
 
 ## 規劃
 
-### 第 1 步：安裝流程（小、效益大）
+### 第 1 步：安裝流程（小、效益大）——2026-11-19 完成
+
+已做：沒有描述檔也能裝（描述與授權自動產生、認不出的授權由使用者填、不支援的服務在安裝前就說明）；GitHub 儲存庫優先用最新 Release 的 `*.ruwebos.tar.gz`；安裝程式可以上傳套件檔；打包工具 `tools/ruwebos-package.mjs`（Worker 引用 npm 套件時用專案自己的 wrangler 打包）與 GitHub Action 範本；給作者的說明 [publish.md](publish.md)。還沒驗證的：GitHub Action 本身（要在 GitHub 上跑），以及用 wrangler 打包有 npm 相依套件的專案（這台機器沒有 wrangler）。
 
 | 項目 | 做法 |
 |---|---|

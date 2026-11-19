@@ -1,0 +1,34 @@
+# Attach a ruwebos package to every GitHub Release of a Cloudflare Workers project, so that ruwebos's
+# installer can install it (given the repository's URL, it prefers the latest Release's *.ruwebos.tar.gz).
+# Copy this file to .github/workflows/ruwebos-release.yml in your project. See ruwebos's doc/publish.md.
+name: ruwebos package
+on:
+  release:
+    types: [published]
+permissions:
+  contents: write # to upload the package to the release
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: ccc-claude-opus/ruwebos
+          path: .ruwebos
+          sparse-checkout: |
+            tools
+            apps/installer/src
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and build
+        run: |
+          if [ -f package-lock.json ]; then npm ci; elif [ -f package.json ]; then npm install; fi
+          if [ -f package.json ]; then npm run build --if-present; fi
+      - name: Package for ruwebos
+        run: node .ruwebos/tools/ruwebos-package.mjs . --out .ruwebos-out
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" .ruwebos-out/*.ruwebos.tar.gz --clobber

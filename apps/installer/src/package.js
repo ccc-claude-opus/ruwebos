@@ -4,13 +4,15 @@
 // 最上層（或唯一的資料夾裡，例如 GitHub 的封存檔）要有 ruwebos-app.json。
 import { gunzip, gzip, isGzip, untar, tar } from './tar.js';
 import { checkPerms } from './perms.js';
+import { generateManifest, unsupportedBindings } from './detect.js';
 
 export const MAX_DOWNLOAD = 50 * 1024 * 1024;
 export const MAX_UNPACKED = 200 * 1024 * 1024;
 
 const dec = new TextDecoder();
 
-/** 使用者給的來源 → 要下載的網址。GitHub 儲存庫（可加 /tree/<分支>）下載它的封存檔。 */
+/** 使用者給的來源 → 要下載的網址。GitHub 儲存庫（可加 /tree/<分支>）下載它的封存檔
+ *（download 會先找最新 Release 裡建置好的 *.ruwebos.tar.gz）。 */
 export function resolveSource(src) {
   let u;
   try {
@@ -21,7 +23,7 @@ export function resolveSource(src) {
   if (u.protocol !== 'https:' && u.protocol !== 'http:') throw new Error('只接受 http:// 或 https:// 的網址');
   const gh = /^\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/tree\/(.+?))?\/?$/.exec(u.pathname);
   if (u.hostname === 'github.com' && gh) {
-    return { url: `https://github.com/${gh[1]}/${gh[2]}/archive/${gh[3] || 'HEAD'}.tar.gz`, kind: 'git' };
+    return { url: `https://github.com/${gh[1]}/${gh[2]}/archive/${gh[3] || 'HEAD'}.tar.gz`, kind: 'git', repo: `${gh[1]}/${gh[2]}`, ref: gh[3] || '' };
   }
   return { url: u.href, kind: 'url' };
 }
@@ -34,6 +36,21 @@ async function get(url, fetcher) {
   const bytes = new Uint8Array(await r.arrayBuffer());
   if (bytes.length > MAX_DOWNLOAD) throw new Error(`套件太大（上限 ${MAX_DOWNLOAD / 1048576} MB）`);
   return { bytes, type: r.headers.get('content-type') || '', url: r.url || url };
+}
+
+/** GitHub 儲存庫最新 Release 裡的 *.ruwebos.tar.gz（沒有就 null）。 */
+async function releaseAsset(repo, fetcher) {
+  try {
+    const r = await fetcher(`https://api.github.com/repos/${repo}/releases/latest`, {
+      headers: { accept: 'application/vnd.github+json', 'user-agent': 'ruwebos-installer' },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!r.ok) return null;
+    const rel = await r.json();
+    return (rel.assets || []).find((a) => /\.ruwebos\.tar\.gz$/.test(a.name))?.browser_download_url || null;
+  } catch {
+    return null;
+  }
 }
 
 /** 網頁裡宣告的套件：<link rel="ruwebos-app" href="…">。 */
@@ -51,7 +68,15 @@ export function declaredPackage(html, base) {
 
 /** 下載套件：網址直接是 .tar.gz，或是宣告了套件的網頁。回傳 { bytes, url, page }。 */
 export async function download(src, fetcher = fetch) {
-  const { url } = resolveSource(src);
+  const { url, repo, ref } = resolveSource(src);
+  // GitHub：作者發佈的、已經建置好的套件優先（最新 Release 的 *.ruwebos.tar.gz）
+  if (repo && !ref) {
+    const asset = await releaseAsset(repo, fetcher);
+    if (asset) {
+      const res = await get(asset, fetcher);
+      if (isGzip(res.bytes)) return { bytes: res.bytes, url: asset, page: null };
+    }
+  }
   let res = await get(url, fetcher);
   let page = null;
   if (!isGzip(res.bytes)) {
@@ -94,8 +119,8 @@ const SECRET = /^[A-Z_][A-Z0-9_]{0,63}$/;
 const SKIP = (p) => p.split('/').some((s) => s.startsWith('._') || s === '.DS_Store' || s === '.git' || s === 'node_modules' || s === '.wrangler' || s === '.rucloud')
   || /(^|\/)(\.dev\.vars[^/]*|\.env(\.[^/]*)?)$/.test(p);
 
-/** ruwebos-app.json 的檢查；回傳整理過的內容。 */
-export function checkManifest(m) {
+/** ruwebos-app.json 的檢查；回傳整理過的內容。generated：自動產生的描述（授權可以是空的，待使用者確認）。 */
+export function checkManifest(m, { generated = false } = {}) {
   if (!m || typeof m !== 'object') throw new Error('ruwebos-app.json 不是 JSON 物件');
   const str = (k, max, required) => {
     const v = m[k];
@@ -110,8 +135,8 @@ export function checkManifest(m) {
   if (!ID.test(id)) throw new Error(`id「${id}」只能用小寫英文、數字與 -（會成為網址 http://${id}.localhost）`);
   const version = str('version', 40, true);
   if (!VERSION.test(version)) throw new Error(`version「${version}」要像 1.2.0`);
-  const license = str('license', 100, true);
-  if (/^(unlicensed|none|proprietary|see license in .*)$/i.test(license) || !/^[A-Za-z0-9.+\-() ]+$/.test(license)) {
+  const license = str('license', 100, !generated);
+  if (license && (/^(unlicensed|none|proprietary|see license in .*)$/i.test(license) || !/^[A-Za-z0-9.+\-() ]+$/.test(license))) {
     throw new Error(`license「${license}」要是 SPDX 授權名稱（例如 MIT、Apache-2.0、GPL-3.0-or-later）；沒有可用授權的套件不能安裝`);
   }
   const color = str('color', 20);
@@ -144,6 +169,7 @@ export function checkManifest(m) {
     permissions: checkPerms(m.permissions),
     secrets: [...new Set(secrets)],
     d1_init: d1Init,
+    generated,
   };
 }
 
@@ -153,26 +179,49 @@ export function checkManifest(m) {
  */
 export async function readPackage(gz) {
   const all = untar(await gunzip(gz), { maxBytes: MAX_UNPACKED });
-  const marker = all
-    .map((f) => f.path)
-    .filter((p) => p === 'ruwebos-app.json' || /^[^/]+\/ruwebos-app\.json$/.test(p))
-    .sort((a, b) => a.length - b.length)[0];
-  if (!marker) throw new Error('套件裡找不到 ruwebos-app.json（要在最上層，或唯一的資料夾裡）');
-  const root = marker.slice(0, -'ruwebos-app.json'.length);
+  // the folder with ruwebos-app.json, else (a plain wrangler project) the one with the wrangler config:
+  // at the top, or in the only folder (GitHub's archives)
+  const top = (re) => all.map((f) => f.path).filter((p) => re.test(p)).sort((a, b) => a.split('/').length - b.split('/').length)[0];
+  const marker = top(/^([^/]+\/)?ruwebos-app\.json$/);
+  const wranglerPath = top(/^([^/]+\/)?wrangler\.(jsonc|json|toml)$/);
+  const root = marker ? marker.slice(0, -'ruwebos-app.json'.length) : wranglerPath ? wranglerPath.replace(/[^/]+$/, '') : null;
+  if (root === null) throw new Error('套件裡找不到 ruwebos-app.json 或 wrangler 設定（wrangler.jsonc／wrangler.json／wrangler.toml）');
   const files = all
     .filter((f) => f.path.startsWith(root) && f.path !== marker)
     .map((f) => ({ path: f.path.slice(root.length), data: f.data }))
     .filter((f) => f.path && !SKIP(f.path));
-  let raw;
-  try {
-    raw = JSON.parse(dec.decode(all.find((f) => f.path === marker).data));
-  } catch (e) {
-    throw new Error(`ruwebos-app.json 讀不懂：${e.message}`);
-  }
-  const manifest = checkManifest(raw);
   const has = (p) => files.some((f) => f.path === p);
   const wranglerFile = ['wrangler.jsonc', 'wrangler.json', 'wrangler.toml'].find(has);
   if (!wranglerFile) throw new Error('套件裡沒有 wrangler.jsonc、wrangler.json 或 wrangler.toml');
+  const wranglerText = dec.decode(files.find((f) => f.path === wranglerFile).data);
+  let wranglerCfg = null;
+  if (wranglerFile !== 'wrangler.toml') {
+    try {
+      wranglerCfg = parseJsonc(wranglerText);
+    } catch (e) {
+      throw new Error(`${wranglerFile} 讀不懂：${e.message}`);
+    }
+  }
+  const unsupported = wranglerCfg ? unsupportedBindings(wranglerCfg) : tomlUnsupported(wranglerText);
+  if (unsupported.length) {
+    throw new Error(`這個應用用到 ruwebos 還不支援的 Cloudflare 服務：${unsupported.join('、')}（安裝的應用目前能用 D1、KV、R2、Durable Objects、Vectorize 與排程）`);
+  }
+  let manifest;
+  let licenseText = '';
+  if (marker) {
+    let raw;
+    try {
+      raw = JSON.parse(dec.decode(all.find((f) => f.path === marker).data));
+    } catch (e) {
+      throw new Error(`ruwebos-app.json 讀不懂：${e.message}`);
+    }
+    manifest = checkManifest(raw);
+  } else {
+    const tomlName = /^\s*name\s*=\s*"([^"]+)"/m.exec(wranglerText)?.[1];
+    const g = generateManifest(wranglerCfg, tomlName, files);
+    manifest = checkManifest(g.manifest, { generated: true });
+    licenseText = g.licenseText;
+  }
 
   // d1_init 的 SQL 變成第一個 migration（rucloud 安裝的應用會自動套用 migrations）
   const init = Object.entries(manifest.d1_init);
@@ -199,7 +248,15 @@ export async function readPackage(gz) {
     if (f.data.length > 256 * 1024) throw new Error('icon 太大（上限 256 KB）');
     icon = { type, data: f.data };
   }
-  return { manifest, files, icon };
+  return { manifest, files, icon, licenseText };
+}
+
+/** wrangler.toml 裡用到的、安裝的應用不能用的綁定（粗略：看表格的名稱）。 */
+function tomlUnsupported(text) {
+  const names = { services: 'service bindings', queues: 'Queues', ai: 'Workers AI', analytics_engine_datasets: 'Analytics Engine', hyperdrive: 'Hyperdrive', workflows: 'Workflows', send_email: 'Email', browser: 'Browser Rendering', containers: 'Containers', images: 'Images' };
+  const found = new Set();
+  for (const m of text.matchAll(/^\s*\[\[?\s*([a-z_]+)(?:\.[a-z_]+)?\s*\]\]?/gm)) if (names[m[1]]) found.add(names[m[1]]);
+  return [...found];
 }
 
 /** 交給 rucloud 的 tar.gz。 */

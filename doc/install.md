@@ -123,6 +123,7 @@ http://installer.localhost:8700/grant?app=<id>&perm=files:read&return=<這個應
 * 定期自動檢查更新（目前是手動「檢查更新」，預裝應用隨系統碟更新）。
 * `.zip` 套件、GitHub 以外的 Git 主機（目前請給 `.tar.gz` 的網址）。
 * 從 Cloudflare 帳號安裝：見 [todo.md](todo.md) 的未來改良。
+* 給應用作者的說明（描述檔、打包、GitHub Action）：[publish.md](publish.md)。
 * 網路上現成的 Cloudflare 開源應用：候選清單與要先補的（安裝一般的 wrangler 專案、需要 npm 建置的專案）見 [cloudflare-apps.md](cloudflare-apps.md)。
 
 ## 決定（2026-11-18）
