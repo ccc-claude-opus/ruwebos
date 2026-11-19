@@ -4,7 +4,7 @@
 
 ## 1. 只用 ruwebos 支援的服務
 
-安裝的應用能用 **D1、KV、R2、Durable Objects、Vectorize、Images、排程（cron）、Queues 與 Workflows**，以及靜態檔案（`assets`）。用到 Workers AI、Email、Browser Rendering、Containers、Analytics Engine、Hyperdrive 或 service bindings 的應用，安裝程式會直接說明哪一項不支援。之後會放寬的部分見 [compat.md](compat.md)。
+安裝的應用能用 **D1、KV、R2、Durable Objects、Vectorize、Images、排程（cron）、Queues、Workflows 與寄信（`send_email`，使用者要給權限、只能寄給使用者自己）**，以及靜態檔案（`assets`）。用到 Workers AI、Email Routing（收信）、Browser Rendering、Containers、Analytics Engine、Hyperdrive 或 service bindings 的應用，安裝程式會直接說明哪一項不支援。之後會放寬的部分見 [compat.md](compat.md)。
 
 應用在 ruwebos 裡是**私人裝置上的本機應用**（`http://<id>.localhost:8700/`），外面的人連不進來；它要能在只有一個使用者、沒有公開網域的情況下運作。
 
@@ -31,7 +31,7 @@ node ruwebos/tools/ruwebos-package.mjs 你的專案 --out dist
 沒有描述檔也能安裝：安裝程式從 `wrangler.jsonc`、`package.json`（名稱、版本、說明、授權）與授權檔自動產生描述，但這樣的應用要求的權限只有「連網際網路」，而且預設不勾。放一個描述檔可以：
 
 * 寫清楚名稱、圖示、顏色與授權；
-* 宣告需要的權限（`files:read`、`files:write`、`system:info`、`network`），讓使用者在安裝時就能同意；
+* 宣告需要的權限（`files:read`、`files:write`、`system:info`、`email:send`、`network`），讓使用者在安裝時就能同意；
 * 宣告要安裝程式產生的密鑰（例如簽 session 用的 `AUTH_SECRET`）；
 * 用 `d1_init` 指定初始的資料表（或用 `migrations/`）。
 

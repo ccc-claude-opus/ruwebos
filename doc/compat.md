@@ -58,14 +58,16 @@ ruwebos 是**一個人用的私人裝置**，應用只在本機（`localhost`）
 
 已做：rucloud 把安裝的應用的佇列名稱加上應用名稱前綴（`<應用>:<佇列>`，包括 dead letter queue 與 R2 事件通知），Worker 只能送到自己有生產者綁定的佇列；workflow 本來就是每個應用一份（`<state>/<應用>/workflows.sqlite`），安裝的應用也會跑 workflow；移除應用並刪除資料時，佇列裡的訊息一起清掉。安裝程式不再拒絕用到 Queues、Workflows 的專案。`[dynamic]` 的應用仍然不能用。會多出來能裝的例子：microfeed（Queues）、CloudPaste（Workflows）。
 
-### 第 3 步：建置、Images 與寄信
+### 第 3 步：建置、Images 與寄信——2026-11-19 完成
+
+還沒驗證的：真的 SMTP 服務（測試用的是假的 SMTP 伺服器）、在虛擬機裡的整套流程。
 
 | 項目 | 做法 |
 |---|---|
 | 在主機上打包 | `ruwebos pack <GitHub 網址>`：在開發機上 clone、`npm ci`、建置、打包成套件，再用安裝程式的「上傳套件」安裝 |
 | 安裝程式自己抓 Worker 的相依套件（2026-11-19 完成） | 依 `package-lock.json` 下載 npm 套件並比對 integrity，**不執行**任何安裝腳本；只適用於不需要前端建置的專案。rucloud 用 wrangler 的 exports 條件（`workerd`、`worker`、`browser`）載入 |
 | Images（2026-11-19 完成） | rucloud 用 Rust 的 image crate 實作 `env.IMAGES`：縮放（各種 fit）、裁切、旋轉、翻轉、模糊、亮度對比、疊圖，輸出 JPEG、PNG、WebP（無損）、GIF；不能輸出 AVIF |
-| 寄信（`send_email`）成為權限（這一步的最後） | rucloud 實作 `send_email` 綁定，透過使用者在「設定」裡填的 SMTP 寄出（例如自己的信箱帳號）；收件人限制照 Cloudflare 的規則 |
+| 寄信（`send_email`）成為權限（這一步的最後；2026-11-19 完成） | rucloud 實作 `send_email` 綁定（`EmailMessage` 與 `{ from, to, subject, text, html }` 兩種寫法），透過使用者在「設定 → 寄信」填的 SMTP 寄出（例如自己的信箱帳號）；和 Cloudflare 一樣只能寄給驗證過的收件地址（設定裡列的），綁定的 `destination_address` 等限制也照做；安裝的應用要有 `email:send` 權限 |
 
 ### 之後
 

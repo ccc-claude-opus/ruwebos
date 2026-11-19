@@ -234,6 +234,7 @@ async function consent(request, env, token) {
   const fresh = cur ? m.permissions.filter((x) => !parse(cur.requested, []).includes(x)) : [];
   const update = !!cur;
   const cmp = cur ? compareVersions(m.version, cur.version) : 1;
+  const mail = m.permissions.includes('email:send') ? await admin(env, '/email').catch(() => null) : null;
   return page(request, {
     app: APP,
     title: update ? '更新' : '安裝',
@@ -262,6 +263,7 @@ ${cur && cmp === 0 ? html`<p class="muted">版本和已安裝的相同，會重�
   <p class="muted small">取消勾選的權限不會給；之後可以在這裡的應用頁面給或收回。應用在沒有權限時應該仍可使用，只是少了那些功能。</p>
   ${m.generated ? html`<p class="muted small">自動產生的描述不知道這個應用真正需要什麼，所以預設都不勾；應用若需要，之後可以在應用頁面給。</p>` : ''}
   ${permList(m.permissions, { checked: update ? [...was, ...fresh] : m.generated ? [] : m.permissions, fresh })}
+  ${mail && !mail.configured ? html`<p class="muted small">還沒設定寄信的帳號：要讓應用寄信，請到「設定」的「寄信」填寫。</p>` : ''}
   <p class="muted small">安裝的應用在自己的沙箱裡執行，有自己的資料；不能讀寫系統的檔案，也不能直接連到這台裝置上的其他應用。</p>
   <div class="row"><button class="primary" type="submit">${update ? '更新' : '安裝'}</button><a class="btn" href="/">取消</a></div>
 </form>`,

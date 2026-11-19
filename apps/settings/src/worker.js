@@ -3,10 +3,11 @@
 //   GET /network    網路：介面、位址、閘道、DNS（由 /sbin/init 寫入），以及現在能不能連到網際網路
 //   GET /apps       應用清單（rucloud 管理埠的 /apps 與 /stats）
 //   GET /licenses   映像裡每個套件的授權（建置時產生的 public/licenses.md）
+//   GET/POST /email 寄信：SMTP 帳號與收件地址（rucloud 管理埠的 /email），安裝的應用有「寄電子郵件」權限才能用
 //   GET /api/v1/system  給安裝的應用（權限 system:info）：時區、語言、系統版本
 // 系統資訊與管理埠的網址、token 由 /sbin/init 寫進 env_file（SYS_*、ADMIN_URL、ADMIN_TOKEN）；
 // 直接在主機上跑（開發）時沒有這些值，頁面會註明。
-import { app, page, html, raw, homeUrl, tzOf, fmt, json } from '../../_shared/lib.js';
+import { app, page, html, raw, homeUrl, tzOf, fmt, json, readForm, crossSite } from '../../_shared/lib.js';
 import { check } from '../../_shared/grant.js';
 import { markdown } from '../../_shared/markdown.js';
 
@@ -17,13 +18,21 @@ const tabs = (url) =>
     ['/', '系統'],
     ['/network', '網路'],
     ['/apps', '應用'],
+    ['/email', '寄信'],
     ['/licenses', '授權'],
   ].map(([href, label]) => html`<a class="chip${url.pathname === href ? ' on' : ''}" href="${href}">${label}</a>`)}</p>`;
 
-async function admin(env, path) {
+async function admin(env, path, { method = 'GET', json: data } = {}) {
   if (!env.ADMIN_URL) return null;
-  const r = await fetch(env.ADMIN_URL + path, { headers: env.ADMIN_TOKEN ? { authorization: `Bearer ${env.ADMIN_TOKEN}` } : {} });
-  if (!r.ok) throw new Error(`管理埠 ${path}：${r.status}`);
+  const headers = env.ADMIN_TOKEN ? { authorization: `Bearer ${env.ADMIN_TOKEN}` } : {};
+  if (data !== undefined) headers['content-type'] = 'application/json';
+  const r = await fetch(env.ADMIN_URL + path, { method, headers, body: data !== undefined ? JSON.stringify(data) : undefined });
+  if (!r.ok) {
+    const text = await r.text();
+    let msg = text;
+    try { msg = JSON.parse(text).error || text; } catch { /* 不是 JSON */ }
+    throw new Error(r.status === 400 ? msg : `管理埠 ${path}：${r.status} ${msg}`);
+  }
   return r.json();
 }
 
@@ -160,6 +169,80 @@ ${list
   });
 }
 
+// 寄信：rucloud 的 send_email 綁定透過這個 SMTP 帳號寄出，只能寄到這裡列的收件地址
+async function email(request, env, url) {
+  let msg = '', error = '';
+  if (request.method === 'POST') {
+    if (crossSite(request)) return new Response('不接受從其他網站或應用送來的表單', { status: 403 });
+    const f = await readForm(request);
+    try {
+      if (f.action === 'clear') {
+        await admin(env, '/email', { method: 'DELETE' });
+        msg = '已清除寄信的設定。';
+      } else if (f.action === 'test') {
+        await admin(env, '/email/test', { method: 'POST', json: { to: String(f.to || '') } });
+        msg = `測試信已寄到 ${f.to}。`;
+      } else {
+        const from = String(f.from || '').trim();
+        const recipients = String(f.recipients || '').split(/[\s,;]+/).filter(Boolean);
+        const cfg = {
+          host: String(f.host || '').trim(),
+          port: Number(f.port) || (f.security === 'tls' ? 465 : 587),
+          security: f.security === 'tls' ? 'tls' : 'starttls',
+          username: String(f.username || '').trim() || null,
+          from,
+          recipients: recipients.length ? recipients : from ? [from] : [],
+        };
+        if (f.password) cfg.password = String(f.password);
+        await admin(env, '/email', { method: 'PUT', json: cfg });
+        msg = '已儲存。';
+      }
+    } catch (e) {
+      error = e.message;
+    }
+  }
+  let cfg = null;
+  try {
+    cfg = await admin(env, '/email');
+  } catch (e) {
+    error ||= e.message;
+  }
+  const c = cfg?.configured ? cfg : {};
+  return page(request, {
+    app: APP,
+    title: '寄信',
+    status: error && request.method === 'POST' ? 400 : 200,
+    body: html`${tabs(url)}
+<h2>寄信的帳號</h2>
+<p>有「寄電子郵件」權限的應用（例如提醒、通知）透過這個帳號寄信，而且<strong>只能寄到下面列的收件地址</strong>（通常就是你自己的信箱），不能寄給別人。</p>
+${msg ? html`<p class="card">${msg}</p>` : ''}
+${error ? html`<p class="error">${error}</p>` : ''}
+${!cfg && !error ? html`<p class="muted">（沒有管理埠的設定：直接在主機上執行時不能設定寄信。）</p>` : ''}
+${cfg ? html`<form class="stack" method="post" action="/email">
+  <label>SMTP 伺服器<input name="host" required value="${c.host || ''}" placeholder="smtp.gmail.com"></label>
+  <div class="row" style="gap:12px">
+    <label class="grow">加密<select name="security">
+      <option value="tls"${c.security === 'tls' ? ' selected' : ''}>TLS（通常是 465 埠）</option>
+      <option value="starttls"${c.security !== 'tls' ? ' selected' : ''}>STARTTLS（通常是 587 埠）</option>
+    </select></label>
+    <label>埠<input name="port" type="number" min="1" max="65535" value="${c.port || ''}" placeholder="465" style="width:7em"></label>
+  </div>
+  <label>帳號<input name="username" value="${c.username || ''}" autocomplete="off" placeholder="me@gmail.com"></label>
+  <label>密碼<input name="password" type="password" autocomplete="new-password" placeholder="${c.has_password ? '已設定（留空表示不變）' : ''}"></label>
+  <label>寄件地址<input name="from" type="email" required value="${c.from || ''}" placeholder="me@gmail.com"></label>
+  <label>收件地址（一行一個，不填就是寄件地址）<textarea name="recipients" rows="3">${(c.recipients || []).join('\n')}</textarea></label>
+  <p class="muted small">Gmail：伺服器 smtp.gmail.com、TLS、465 埠，密碼要用 Google 帳戶的「應用程式密碼」，不是登入密碼。密碼存在 rucloud 的資料夾裡，只有 rucloud 讀得到，這個頁面也不會再顯示。</p>
+  <p class="row"><button class="btn primary" name="action" value="save">儲存</button>${cfg.configured ? html` <button class="btn" name="action" value="clear" data-confirm="清除寄信的設定？應用將不能寄信。">清除</button>` : ''}</p>
+</form>
+${cfg.configured ? html`<h2>寄測試信</h2>
+<form class="row" method="post" action="/email" style="gap:8px">
+  <input type="hidden" name="action" value="test">
+  <select name="to" class="grow">${(c.recipients || []).map((r) => html`<option>${r}</option>`)}</select>
+  <button class="btn">寄出</button>
+</form>` : ''}` : ''}`,
+  });
+}
+
 async function licenses(request, env, url) {
   const r = env.ASSETS ? await env.ASSETS.fetch(new URL('/licenses.md', request.url)) : null;
   const text = r && r.ok ? await r.text() : '';
@@ -184,6 +267,7 @@ export default app(APP, async (request, env, url, ctx) => {
       rucloud: env.SYS_RUCLOUD || null,
     });
   }
+  if (url.pathname === '/email') return email(request, env, url);
   if (request.method !== 'GET') return null;
   if (url.pathname === '/') return system(request, env, url);
   if (url.pathname === '/network') return network(request, env, url);

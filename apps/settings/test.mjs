@@ -7,5 +7,14 @@ export default async function (t) {
   t.ok(net.text.includes('主機') || net.text.includes('這台機器'), 'where the network comes from');
   t.ok(net.text.includes('已連上網際網路') || net.text.includes('無法連上網際網路'), 'connectivity result');
   await t.page('/licenses', '授權');
+  // 寄信：開發時沒有管理埠只有說明；在 ruwebos 裡存一份設定、讀回來、清掉（不會真的連 SMTP）
+  const mail = await t.page('/email', '寄信的帳號');
+  if (mail.text.includes('name="host"')) {
+    const saved = await t.post('/email', { action: 'save', host: 'smtp.example.com', security: 'starttls', port: '587', from: 'me@example.com', recipients: 'me@example.com' });
+    t.ok(saved.status === 200 && saved.text.includes('已儲存') && saved.text.includes('smtp.example.com'), `save email: ${saved.status}`);
+    t.ok((await t.post('/email', { action: 'clear' })).text.includes('已清除'), 'clear email');
+  }
+  const forged = await fetch(`${t.base}/email`, { method: 'POST', headers: { origin: 'http://evil.localhost:8700', 'content-type': 'application/x-www-form-urlencoded' }, body: 'action=clear' });
+  t.ok(forged.status === 403, `cross-site post refused: ${forged.status}`);
   t.ok((await t.post('/', {})).status === 404, 'POST is not a route');
 }

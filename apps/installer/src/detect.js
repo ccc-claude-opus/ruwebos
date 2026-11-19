@@ -80,7 +80,7 @@ export function generateManifest(wranglerCfg, wranglerName, files) {
       homepage: url(String(pkg.homepage || '')),
       source: url(String(repo).replace(/^git\+/, '')),
       // 一般的 Workers 應用常會連到外部；要不要給由使用者決定（同意畫面預設不勾）
-      permissions: ['network'],
+      permissions: ['network', ...(wranglerCfg?.send_email?.length ? ['email:send'] : [])],
       d1_init: d1Init,
       generated: true,
     },
@@ -96,7 +96,6 @@ export function unsupportedBindings(cfg) {
     ai: 'Workers AI',
     analytics_engine_datasets: 'Analytics Engine',
     hyperdrive: 'Hyperdrive',
-    send_email: 'Email',
     browser: 'Browser Rendering',
     containers: 'Containers',
   };

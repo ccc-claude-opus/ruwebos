@@ -78,6 +78,18 @@ export const redirect = (location, status = 303) => new Response(null, { status,
 export const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8' } });
 
+/**
+ * A form post from another site or another app's page (each app is its own origin, so another app's page
+ * could post here): the browser says so with Origin or Sec-Fetch-Site. Requests without either (scripts,
+ * tests) are not from a page and pass.
+ */
+export function crossSite(request) {
+  const origin = request.headers.get('origin');
+  if (origin && origin !== new URL(request.url).origin) return true;
+  const site = request.headers.get('sec-fetch-site');
+  return !!site && site !== 'same-origin' && site !== 'none';
+}
+
 /** Form fields as an object of strings (files stay File objects; repeated names become arrays). */
 export async function readForm(request) {
   // 沒有表單內容（例如只有按鈕的 POST 由腳本送出、沒有 Content-Type）
