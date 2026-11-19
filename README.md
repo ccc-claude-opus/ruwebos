@@ -20,35 +20,37 @@ ruwebos 把幾個獨立的專案串成一個系統，使用者看到的只有瀏
 flowchart TB
   user(["使用者"])
 
-  subgraph host["主機（macOS、ARM Linux；樹莓派規劃中）"]
+  subgraph host["使用者的機器（macOS、Linux、樹莓派）"]
     direction LR
     launcher["啟動器 ./ruwebos"]
     browser["瀏覽器（可抽換）<br/>Chrome（預設）、Firefox、Safari、<br/>rubrowser、任何指令"]
   end
 
-  subgraph vm["虛擬機"]
-    direction TB
-    vmimpl["ruvm 或 QEMU（可抽換）<br/>加速：hvf、kvm、tcg"]
-    kernel["Linux 核心（Debian 13 arm64）"]
-    rucloud[["rucloud（固定）<br/>edge :8700、管理埠、[install]"]]
-    subgraph apps["應用（每個應用是一個 Worker）"]
-      direction LR
-      sysapps["系統應用<br/>檔案、通訊錄、相簿…<br/>設定、安裝程式、主畫面<br/>（系統碟，唯讀）"]
-      installed["安裝的應用（可抽換）<br/>預裝套件、網站宣告的套件、GitHub<br/>（資料碟）"]
-    end
-    store[("資料碟：每個應用的<br/>D1、KV、R2、Durable Objects")]
-    vmimpl --> kernel --> rucloud --> apps
-    installed -. "service binding<br/>（使用者同意的權限）" .-> sysapps
-    apps --> store
+  subgraph where["rucloud 在哪裡執行（可抽換）"]
+    direction LR
+    vmimpl["虛擬機：ruvm 或 QEMU<br/>加速：hvf、kvm、tcg<br/>Linux 核心（Debian 13 arm64）"]
+    native["直接裝在 ARM64 Linux 上<br/>native/install.sh、systemd<br/>（例如樹莓派）"]
   end
 
-  native["或：直接安裝在 ARM64 Linux 上，不用虛擬機<br/>native/install.sh（樹莓派的開機與全螢幕規劃中）"]
+  rucloud[["rucloud（固定）<br/>edge :8700、管理埠、[install]"]]
+
+  subgraph apps["應用（每個應用是一個 Worker）"]
+    direction LR
+    sysapps["系統應用<br/>檔案、通訊錄、相簿…<br/>設定、安裝程式、主畫面<br/>（唯讀）"]
+    installed["安裝的應用（可抽換）<br/>預裝套件、網站宣告的套件、GitHub"]
+  end
+
+  store[("每個應用的資料：D1、KV、R2、Durable Objects<br/>虛擬機的資料碟，或 /var/lib/ruwebos")]
 
   user --> browser
-  launcher -- "開啟（--browser）" --> browser
   launcher -- "開機（--qemu、--memory）" --> vmimpl
-  launcher -.-> native
-  browser -- "http://*.localhost:8700<br/>（埠轉送）" --> rucloud
+  launcher -- "開啟（--browser）" --> browser
+  browser -- "http://*.localhost:8700" --> rucloud
+  vmimpl --> rucloud
+  native --> rucloud
+  rucloud --> apps
+  installed -. "service binding<br/>（使用者同意的權限）" .-> sysapps
+  apps --> store
 
   subgraph legend["圖例"]
     direction LR
@@ -58,12 +60,12 @@ flowchart TB
 
   classDef swap fill:#e7f5ff,stroke:#1c7ed6,stroke-dasharray:6 4,color:#000
   classDef fixed fill:#fff4e6,stroke:#e8590c,stroke-width:3px,color:#000
-  class browser,installed,vmimpl swap
+  class browser,installed,vmimpl,native,l1 swap
   class rucloud,l2 fixed
-  class native,l1 swap
+  style where stroke:#1c7ed6,stroke-dasharray:6 4
 ```
 
-使用者只透過瀏覽器使用系統：所有應用都在 `http://<名稱>.localhost:8700/`，由虛擬機裡的 rucloud 提供，啟動器把主機的 8700 埠轉進虛擬機。安裝的應用只能透過使用者同意的權限（service binding）存取系統應用的資料。
+使用者只透過瀏覽器使用系統：所有應用都在 `http://<名稱>.localhost:8700/`，由 rucloud 提供。rucloud 跑在虛擬機裡（啟動器把主機的 8700 埠轉進去），或直接裝在 Linux 上（[doc/native.md](doc/native.md)）。安裝的應用只能透過使用者同意的權限（service binding）存取系統應用的資料。
 
 ![ruwebos 的主畫面](doc/home.png)
 
