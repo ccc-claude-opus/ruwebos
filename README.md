@@ -1,6 +1,24 @@
 # ruwebos
 
-以瀏覽器為介面的作業系統，支援手機與桌機。
+以瀏覽器為介面的作業系統，有完整的圖形介面，適合平板、手機與桌機。
+
+## 為什麼做這個
+
+ruwebos 是在 AI 的協助下做出來的：一個自己的瀏覽器（rubrowser）、在本機重現 Cloudflare 基礎建設的 rucloud、一個自己的虛擬機（ruvm），再加上 Linux（Debian），組成一個類似平板、手機作業系統的系統。
+
+它的特色是**介面就是瀏覽器**，所以：
+
+* **能發佈到 Cloudflare 的網站應用，就能安裝到這個系統**。不必像 iOS、Android 那樣，只能透過平台自己的軟體商店；網站在網頁裡宣告套件，或給一個 GitHub 儲存庫，就能安裝（[doc/install.md](doc/install.md)）。
+* **一份程式碼，同時用在網站、手機、平板、桌機**。不必為了手機版、桌機版各開一個專案：應用寫成可以發佈到 Cloudflare 的形式、在 rucloud 上測試通過，就能同時發佈到這些地方。
+* **整個系統都是開放原始碼**：從瀏覽器、應用伺服器到虛擬機，每一層都看得到、改得到；系統碟裡每個套件的授權都列得出來。
+
+一開始使用者介面用的是自己做的 rubrowser，但它對大型網站（GitHub、YouTube 等）的支援一直不夠完整。後來想通了：沒有必要堅持用自己的瀏覽器。既然應用都是標準的網頁，就讓瀏覽器可以抽換；換上 Chrome 這類成熟的瀏覽器之後，整個系統就完整了。rubrowser 仍然保留，用來研究與驗證網頁標準。
+
+同樣的道理，虛擬機也可以抽換（ruvm 或 QEMU），甚至不用虛擬機，直接裝在 ARM64 的 Linux 上（例如樹莓派；目前在 Docker 的 Debian 容器裡測試通過，還沒在樹莓派實機上試過，見 [doc/native.md](doc/native.md)）。
+
+目前的限制：安裝的應用能用的 Cloudflare 服務是 D1、KV、R2、Durable Objects 與排程（cron）；Workers AI、Queues、Email 等還不能用，需要先建置（npm）的專案也要先處理。網路上現成的候選應用見 [doc/cloudflare-apps.md](doc/cloudflare-apps.md)。
+
+## 組成
 
 ruwebos 把幾個獨立的專案串成一個系統，使用者看到的只有瀏覽器。除了 rucloud，其他部分都可以抽換：
 
