@@ -2,16 +2,70 @@
 
 以瀏覽器為介面的作業系統，支援手機與桌機。
 
-ruwebos 把四個獨立的專案串成一個系統，使用者看到的只有瀏覽器：
+ruwebos 把幾個獨立的專案串成一個系統，使用者看到的只有瀏覽器。除了 rucloud，其他部分都可以抽換：
 
-| 專案 | 角色 |
-|---|---|
-| [ruvm](https://github.com/ccc-claude-opus/ruvm) | 虛擬機：macOS 上用 Hypervisor.framework（`-accel hvf`）、ARM Linux 上用 KVM，其他平台用直譯器 |
-| Linux（Debian 13 arm64） | 核心、檔案系統、網路；使用者不直接接觸 |
-| [rucloud](https://github.com/ccc-claude-opus/rucloud) | 應用伺服器：每個應用是一個 Cloudflare Workers 式的 Worker，資料放 D1 / KV / R2 / Durable Objects |
-| [rubrowser](https://github.com/ccc-claude-opus/rubrowser) | 唯一的使用者介面：主畫面和應用都是網頁 |
+| 部分 | 預設 | 可以換成 |
+|---|---|---|
+| 瀏覽器 | Chrome（沒有就用 rubrowser） | Firefox、Safari、[rubrowser](https://github.com/ccc-claude-opus/rubrowser)、任何指令（`--browser`） |
+| 虛擬機 | [ruvm](https://github.com/ccc-claude-opus/ruvm)：macOS 用 Hypervisor.framework（`-accel hvf`）、ARM Linux 用 KVM，其他平台用直譯器 | QEMU（`--qemu`）；之後在樹莓派上可以不用虛擬機（規劃中） |
+| Linux（Debian 13 arm64） | 核心、檔案系統、網路；使用者不直接接觸 | 一般的 ARM64 Linux |
+| [rucloud](https://github.com/ccc-claude-opus/rucloud) | 應用伺服器：每個應用是一個 Cloudflare Workers 式的 Worker，資料放 D1、KV、R2、Durable Objects | **固定**（應用都依它的 Workers 相容 API 寫成） |
+| 應用 | 系統應用與預裝套件 | 安裝其他套件、移除預裝的（[doc/install.md](doc/install.md)） |
 
-本 repo 負責整合：系統映像的建置、一鍵啟動器、主畫面。
+本 repo 負責整合：系統映像的建置、一鍵啟動器、主畫面、系統應用與安裝程式。
+
+## 架構
+
+```mermaid
+flowchart TB
+  user(["使用者"])
+
+  subgraph host["主機（macOS、ARM Linux；樹莓派規劃中）"]
+    direction LR
+    launcher["啟動器 ./ruwebos"]
+    browser["瀏覽器（可抽換）<br/>Chrome（預設）、Firefox、Safari、<br/>rubrowser、任何指令"]
+  end
+
+  subgraph vm["虛擬機"]
+    direction TB
+    vmimpl["ruvm 或 QEMU（可抽換）<br/>加速：hvf、kvm、tcg"]
+    kernel["Linux 核心（Debian 13 arm64）"]
+    rucloud[["rucloud（固定）<br/>edge :8700、管理埠、[install]"]]
+    subgraph apps["應用（每個應用是一個 Worker）"]
+      direction LR
+      sysapps["系統應用<br/>檔案、通訊錄、相簿…<br/>設定、安裝程式、主畫面<br/>（系統碟，唯讀）"]
+      installed["安裝的應用（可抽換）<br/>預裝套件、網站宣告的套件、GitHub<br/>（資料碟）"]
+    end
+    store[("資料碟：每個應用的<br/>D1、KV、R2、Durable Objects")]
+    vmimpl --> kernel --> rucloud --> apps
+    installed -. "service binding<br/>（使用者同意的權限）" .-> sysapps
+    apps --> store
+  end
+
+  native["直接安裝在 Linux 上，不用虛擬機（規劃中）"]
+
+  user --> browser
+  launcher -- "開啟（--browser）" --> browser
+  launcher -- "開機（--qemu、--memory）" --> vmimpl
+  launcher -.-> native
+  browser -- "http://*.localhost:8700<br/>（埠轉送）" --> rucloud
+
+  subgraph legend["圖例"]
+    direction LR
+    l1["可抽換"]
+    l2[["固定"]]
+    l3["規劃中"]
+  end
+
+  classDef swap fill:#e7f5ff,stroke:#1c7ed6,stroke-dasharray:6 4,color:#000
+  classDef fixed fill:#fff4e6,stroke:#e8590c,stroke-width:3px,color:#000
+  classDef plan fill:#f8f9fa,stroke:#adb5bd,stroke-dasharray:2 4,color:#666
+  class browser,installed,vmimpl,l1 swap
+  class rucloud,l2 fixed
+  class native,l3 plan
+```
+
+使用者只透過瀏覽器使用系統：所有應用都在 `http://<名稱>.localhost:8700/`，由虛擬機裡的 rucloud 提供，啟動器把主機的 8700 埠轉進虛擬機。安裝的應用只能透過使用者同意的權限（service binding）存取系統應用的資料。
 
 ![ruwebos 的主畫面](doc/home.png)
 
