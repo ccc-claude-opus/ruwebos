@@ -14,6 +14,13 @@ export default async function (t) {
     t.ok(saved.status === 200 && saved.text.includes('已儲存') && saved.text.includes('smtp.example.com'), `save email: ${saved.status}`);
     t.ok((await t.post('/email', { action: 'clear' })).text.includes('已清除'), 'clear email');
   }
+  // AI：開發時只有說明；在 ruwebos 裡存一份設定、讀回來、清掉（不會真的連到服務）
+  const aiPage = await t.page('/ai', 'AI 的後端');
+  if (aiPage.text.includes('name="base_url"')) {
+    const saved = await t.post('/ai', { action: 'save', base_url: 'http://10.0.2.2:11434/v1', model: 'llama3.2', daily_requests: '50', daily_tokens: '0' });
+    t.ok(saved.status === 200 && saved.text.includes('已儲存') && saved.text.includes('llama3.2'), `save ai: ${saved.status}`);
+    t.ok((await t.post('/ai', { action: 'clear' })).text.includes('已清除'), 'clear ai');
+  }
   const forged = await fetch(`${t.base}/email`, { method: 'POST', headers: { origin: 'http://evil.localhost:8700', 'content-type': 'application/x-www-form-urlencoded' }, body: 'action=clear' });
   t.ok(forged.status === 403, `cross-site post refused: ${forged.status}`);
   t.ok((await t.post('/', {})).status === 404, 'POST is not a route');

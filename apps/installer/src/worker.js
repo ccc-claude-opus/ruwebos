@@ -253,6 +253,7 @@ async function consent(request, env, token) {
   const update = !!cur;
   const cmp = cur ? compareVersions(m.version, cur.version) : 1;
   const mail = m.permissions.includes('email:send') ? await admin(env, '/email').catch(() => null) : null;
+  const aiCfg = m.permissions.includes('ai') ? await admin(env, '/ai').catch(() => null) : null;
   return page(request, {
     app: APP,
     title: update ? '更新' : '安裝',
@@ -283,6 +284,7 @@ ${cur && cmp === 0 ? html`<p class="muted">版本和已安裝的相同，會重�
   ${permList(m.permissions, { checked: update ? was.filter((x) => m.permissions.includes(x)) : [], fresh, reasons: m.permission_reasons || {} })}
   ${comboWarnings(m.permissions)}
   ${mail && !mail.configured ? html`<p class="muted small">還沒設定寄信的帳號：要讓應用寄信，請到「設定」的「寄信」填寫。</p>` : ''}
+  ${aiCfg && !aiCfg.configured ? html`<p class="muted small">還沒設定 AI 的服務：要讓應用使用 AI，請到「設定」的「AI」選擇。</p>` : ''}
   <p class="muted small">安裝的應用在自己的沙箱裡執行，有自己的資料；不能讀寫系統的檔案，也不能直接連到這台裝置上的其他應用。</p>
   <div class="row"><button class="primary" type="submit">${update ? '更新' : '安裝'}</button><a class="btn" href="/">取消</a></div>
 </form>`,

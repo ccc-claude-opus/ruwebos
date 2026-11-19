@@ -104,9 +104,14 @@ export default async function (t) {
   } else {
     console.log('  (skip npm: registry.npmjs.org unreachable)');
   }
-  up = await upload('test-ai', await project('test-ai', mit, '"ai": { "binding": "AI" },'));
+  up = await upload('test-browser', await project('test-browser', mit, '"browser": { "binding": "B" },'));
   const refused = await up.text();
-  t.ok(up.status === 400 && refused.includes('Workers AI'), `unsupported binding: ${up.status}`);
+  t.ok(up.status === 400 && refused.includes('Browser Rendering'), `unsupported binding: ${up.status}`);
+  // ai 綁定：可以裝，自動要求「使用 AI」權限（預設不勾）
+  up = await upload('test-ai', await project('test-ai', mit, '"ai": { "binding": "AI" },'));
+  t.ok(up.status === 303, `ai upload: ${up.status}`);
+  tok = /token=(\w+)/.exec(up.headers.get('location'))[1];
+  await t.page(`/install?token=${tok}`, '使用 AI');
   up = await upload('test-build', await project('test-build', mit, '"assets": { "directory": "./dist" },'));
   t.ok(up.status === 400 && (await up.text()).includes('要先建置'), `needs a build: ${up.status}`);
   for (const id of ['test-plain', 'test-odd', 'test-queue']) t.ok((await t.post(`/apps/${id}/remove`, { data: 'purge' })).status === 303, `remove ${id}`);

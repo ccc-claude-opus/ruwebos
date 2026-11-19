@@ -7,6 +7,7 @@ export const PERMS = {
   'files:read': { label: '讀取「檔案」裡的檔案', detail: '列出資料夾、讀取檔案內容', icon: '📁', service: 'files', binding: 'FILES' },
   'files:write': { label: '在「檔案」裡新增、修改、刪除檔案', detail: '刪除的檔案會先放進垃圾桶', icon: '📝', service: 'files', binding: 'FILES' },
   'email:send': { label: '寄電子郵件給你', detail: '透過「設定」裡的寄信帳號寄出，只能寄到你在那裡列的收件地址（例如提醒、通知）', icon: '✉️' },
+  ai: { label: '使用 AI', detail: '透過「設定 → AI」選的服務（本機的模型，或你的 API 金鑰）；應用送出的內容會交給那個服務，每天有用量上限', icon: '✨' },
   'system:info': { label: '讀取系統資訊', detail: '時區、語言、系統版本', icon: 'ℹ️', service: 'settings', binding: 'SYSTEM' },
 };
 
@@ -43,5 +44,6 @@ export function grantsFor(app, granted) {
     services: [...byService].map(([service, { binding, perms }]) => ({ binding, service, props: { app, perms } })),
     network: granted.includes('network'),
     email: granted.includes('email:send'),
+    ai: granted.includes('ai'),
   };
 }

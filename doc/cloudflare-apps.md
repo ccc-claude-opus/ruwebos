@@ -44,7 +44,7 @@ ruwebos 安裝的應用（rucloud 的 `[install]`）只能用 **D1、KV、R2、D
 
 | 原因 | 例子 |
 |---|---|
-| 用到 Workers AI 或 Analytics Engine | Sink（短網址）、Counterscale（流量分析）、Inkstone、FlareMo |
+| 用到 Workers AI（2026-11-19 起可以用，要給 `ai` 權限）或 Analytics Engine（不做） | Sink（短網址）、Inkstone、FlareMo；Counterscale（流量分析，用 Analytics Engine） |
 | 要用自己的網域收信（Email Routing） | Cloud Mail、Cloudflare Temp Email、Agentic Inbox 等郵件類 |
 | 用到 Queues 或 Workflows（2026-11-19 起可以用，見 [compat.md](compat.md) 第 2 步；還要確認其他條件） | microfeed、CloudPaste、git-on-cloudflare |
 | 授權不明或不是開源 | Memos Worker、r2-webdav、Timeseal（BUSL）、Kody（FSL） |

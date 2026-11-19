@@ -3,6 +3,7 @@
 //   GET /network    網路：介面、位址、閘道、DNS（由 /sbin/init 寫入），以及現在能不能連到網際網路
 //   GET /apps       應用清單（rucloud 管理埠的 /apps 與 /stats）
 //   GET /licenses   映像裡每個套件的授權（建置時產生的 public/licenses.md）
+//   GET/POST /ai    AI：Workers AI 的後端（rucloud 管理埠的 /ai）、每個應用的用量與每天的上限
 //   GET/POST /email 寄信：SMTP 帳號與收件地址（rucloud 管理埠的 /email），安裝的應用有「寄電子郵件」權限才能用
 //   GET /api/v1/system  給安裝的應用（權限 system:info）：時區、語言、系統版本
 // 系統資訊與管理埠的網址、token 由 /sbin/init 寫進 env_file（SYS_*、ADMIN_URL、ADMIN_TOKEN）；
@@ -19,6 +20,7 @@ const tabs = (url) =>
     ['/network', '網路'],
     ['/apps', '應用'],
     ['/email', '寄信'],
+    ['/ai', 'AI'],
     ['/licenses', '授權'],
   ].map(([href, label]) => html`<a class="chip${url.pathname === href ? ' on' : ''}" href="${href}">${label}</a>`)}</p>`;
 
@@ -242,6 +244,88 @@ ${cfg.configured ? html`<h2>寄測試信</h2>
   });
 }
 
+// AI：安裝的應用（有「使用 AI」權限的）與系統的 env.AI 都用這個後端
+async function ai(request, env, url) {
+  let msg = '', error = '';
+  if (request.method === 'POST') {
+    const f = await readForm(request);
+    try {
+      if (f.action === 'clear') {
+        await admin(env, '/ai', { method: 'DELETE' });
+        msg = '已清除 AI 的設定。';
+      } else if (f.action === 'test') {
+        const r = await admin(env, '/ai/test', { method: 'POST' });
+        msg = `AI 回答：「${r.response}」`;
+      } else {
+        const opt = (k) => String(f[k] || '').trim() || null;
+        const cfg = {
+          base_url: String(f.base_url || '').trim(),
+          model: opt('model'),
+          embedding_model: opt('embedding_model'),
+          daily_requests: Math.max(0, Math.floor(Number(f.daily_requests) || 0)),
+          daily_tokens: Math.max(0, Math.floor(Number(f.daily_tokens) || 0)),
+        };
+        if (f.api_key) cfg.api_key = String(f.api_key);
+        await admin(env, '/ai', { method: 'PUT', json: cfg });
+        msg = '已儲存。';
+      }
+    } catch (e) {
+      error = e.message;
+    }
+  }
+  let cfg = null, usage = [];
+  try {
+    cfg = await admin(env, '/ai');
+    usage = cfg ? (await admin(env, '/ai/usage?days=30')).usage : [];
+  } catch (e) {
+    error ||= e.message;
+  }
+  const c = cfg?.configured ? cfg : {};
+  // 主機上的 Ollama：VM 裡經 ruvm 的閘道連到主機；直接裝在這台機器上就是 localhost
+  const hostAddr = env.SYS_PLATFORM === 'native' || !env.SYS_NET_GW ? 'localhost' : env.SYS_NET_GW;
+  const today = new Date().toISOString().slice(0, 10);
+  const byApp = new Map();
+  for (const u of usage) {
+    const a = byApp.get(u.app) || { today: 0, todayTokens: 0, requests: 0, tokens: 0 };
+    if (u.day === today) {
+      a.today += u.requests;
+      a.todayTokens += u.tokens;
+    }
+    a.requests += u.requests;
+    a.tokens += u.tokens;
+    byApp.set(u.app, a);
+  }
+  return page(request, {
+    app: APP,
+    title: 'AI',
+    status: error && request.method === 'POST' ? 400 : 200,
+    body: html`${tabs(url)}
+<h2>AI 的後端</h2>
+<p>有「使用 AI」權限的應用透過這裡設定的服務使用 AI（Cloudflare Workers AI 相容的 <code>env.AI</code>）。可以用<strong>本機的模型</strong>（例如主機上的 Ollama，資料不離開你的電腦），或<strong>你自己的 API 金鑰</strong>（OpenAI 相容的服務；應用送出的內容會傳到那個服務，也可能要付費）。</p>
+${msg ? html`<p class="card">${msg}</p>` : ''}
+${error ? html`<p class="error">${error}</p>` : ''}
+${!cfg && !error ? html`<p class="muted">（沒有管理埠的設定：直接在主機上執行時不能設定 AI。）</p>` : ''}
+${cfg ? html`<form class="stack" method="post" action="/ai">
+  <label>服務的網址（OpenAI 相容）<input name="base_url" required value="${c.base_url || ''}" placeholder="http://${hostAddr}:11434/v1"></label>
+  <p class="muted small">主機上的 Ollama：<code>http://${hostAddr}:11434/v1</code>${hostAddr !== 'localhost' ? '（虛擬機的閘道就是主機的 127.0.0.1，主機上的 Ollama 照常啟動就好）' : ''}；OpenAI：<code>https://api.openai.com/v1</code>。</p>
+  <label>API 金鑰<input name="api_key" type="password" autocomplete="new-password" placeholder="${c.has_api_key ? '已設定（留空表示不變）' : '本機的模型通常不用'}"></label>
+  <div class="row" style="gap:12px">
+    <label class="grow">模型<input name="model" value="${c.model || ''}" placeholder="llama3.2"></label>
+    <label class="grow">Embedding 模型<input name="embedding_model" value="${c.embedding_model || ''}" placeholder="nomic-embed-text"></label>
+  </div>
+  <p class="muted small">應用的程式碼寫的是 Cloudflare 的模型名稱（例如 <code>@cf/meta/llama-3.1-8b-instruct</code>）；這裡填了就一律改用這個模型。</p>
+  <div class="row" style="gap:12px">
+    <label class="grow">每個應用每天最多幾次<input name="daily_requests" type="number" min="0" value="${c.daily_requests ?? 200}"></label>
+    <label class="grow">每個應用每天最多幾個 token<input name="daily_tokens" type="number" min="0" value="${c.daily_tokens ?? 100000}"></label>
+  </div>
+  <p class="muted small">0 表示不限。用付費的服務時，上限可以避免某個應用用掉太多錢。</p>
+  <p class="row"><button class="btn primary" name="action" value="save">儲存</button>${cfg.configured ? html` <button class="btn" name="action" value="test">試問一句</button> <button class="btn" name="action" value="clear" data-confirm="清除 AI 的設定？應用將不能使用 AI。">清除</button>` : ''}</p>
+</form>
+<h2>用量（最近 30 天）</h2>
+${byApp.size ? html`<table><tr><th>應用</th><th>今天</th><th>30 天</th></tr>${[...byApp].map(([app, a]) => html`<tr><td>${app === '(test)' ? '（測試）' : app}</td><td>${a.today} 次 · ${a.todayTokens} tokens</td><td>${a.requests} 次 · ${a.tokens} tokens</td></tr>`)}</table>` : html`<p class="muted">還沒有應用用過 AI。</p>`}` : ''}`,
+  });
+}
+
 async function licenses(request, env, url) {
   const r = env.ASSETS ? await env.ASSETS.fetch(new URL('/licenses.md', request.url)) : null;
   const text = r && r.ok ? await r.text() : '';
@@ -267,6 +351,7 @@ export default app(APP, async (request, env, url, ctx) => {
     });
   }
   if (url.pathname === '/email') return email(request, env, url);
+  if (url.pathname === '/ai') return ai(request, env, url);
   if (request.method !== 'GET') return null;
   if (url.pathname === '/') return system(request, env, url);
   if (url.pathname === '/network') return network(request, env, url);

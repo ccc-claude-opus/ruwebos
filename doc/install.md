@@ -77,7 +77,7 @@ sequenceDiagram
 
 `.dev.vars`、`.env`、`.git`、`node_modules` 不會被裝進去；套件解開後上限 200 MB（下載 50 MB）。
 
-**npm 相依套件**：Worker 的程式引用了 npm 套件（`import { Hono } from 'hono'`）、套件裡又沒有 `node_modules` 時，安裝程式依 `package-lock.json`（npm 7 以上，lockfileVersion 2、3）從 `registry.npmjs.org` 下載執行時要的套件（不含 devDependencies，略過給其他平台的選用套件），逐一比對 `integrity`（sha512），放進 `node_modules/`；同意畫面列出套件數與各授權的個數。**不執行任何安裝腳本**，也不建置：wrangler 設定有 `build.command`、靜態檔案資料夾或 Worker 的程式不在套件裡（要先 `npm run build` 產生）的專案，安裝程式會說明要由作者打包。只有 `yarn.lock`、`pnpm-lock.yaml` 的專案也一樣。rucloud 載入 npm 套件時用和 wrangler 一樣的 exports 條件（`workerd`、`worker`、`browser`）。套件自己的 wrangler 設定裡不能有 `services`、`ai`、`analytics_engine_datasets`、`hyperdrive`（會碰到其他應用或伺服器的資源）；D1、KV、R2、Durable Objects、Vectorize、Images、cron、Queues、Workflows、`send_email`（要有 `email:send` 權限）都可以用，資料都是這個應用自己的（佇列名稱由 rucloud 加上應用名稱前綴，別的應用碰不到）。
+**npm 相依套件**：Worker 的程式引用了 npm 套件（`import { Hono } from 'hono'`）、套件裡又沒有 `node_modules` 時，安裝程式依 `package-lock.json`（npm 7 以上，lockfileVersion 2、3）從 `registry.npmjs.org` 下載執行時要的套件（不含 devDependencies，略過給其他平台的選用套件），逐一比對 `integrity`（sha512），放進 `node_modules/`；同意畫面列出套件數與各授權的個數。**不執行任何安裝腳本**，也不建置：wrangler 設定有 `build.command`、靜態檔案資料夾或 Worker 的程式不在套件裡（要先 `npm run build` 產生）的專案，安裝程式會說明要由作者打包。只有 `yarn.lock`、`pnpm-lock.yaml` 的專案也一樣。rucloud 載入 npm 套件時用和 wrangler 一樣的 exports 條件（`workerd`、`worker`、`browser`）。套件自己的 wrangler 設定裡不能有 `services`、`analytics_engine_datasets`、`hyperdrive`（會碰到其他應用或伺服器的資源）；D1、KV、R2、Durable Objects、Vectorize、Images、cron、Queues、Workflows、`send_email`（要有 `email:send` 權限）、`ai`（要有 `ai` 權限）都可以用，資料都是這個應用自己的（佇列名稱由 rucloud 加上應用名稱前綴，別的應用碰不到）。
 
 ## 權限
 
@@ -89,6 +89,7 @@ sequenceDiagram
 | `files:write` | 在「檔案」裡新增、修改、刪除 | `env.FILES`：`PUT /api/v1/file?path=`（body 是內容）、`DELETE /api/v1/file?path=`（搬到垃圾桶）、`POST /api/v1/mkdir?path=` |
 | `system:info` | 時區、語言、系統版本 | `env.SYSTEM`：`GET /api/v1/system` |
 | `email:send` | 寄電子郵件給使用者 | 套件 wrangler 設定裡的 `send_email` 綁定（`env.MAIL.send(...)`，Cloudflare 相容）：透過「設定 → 寄信」填的 SMTP 帳號寄出，**只能寄到那裡列的收件地址**；沒有這個權限時 `send()` 丟錯。用到 `send_email` 的套件，安裝程式會自動加上這個權限讓使用者決定 |
+| `ai` | 使用 AI | 套件 wrangler 設定裡的 `ai` 綁定（`env.AI.run(...)`，Cloudflare Workers AI 相容）：用「設定 → AI」選的服務（本機的模型，例如主機上的 Ollama，或使用者自己的 API 金鑰），每個應用每天有請求數與 token 數的上限，用量列在「設定 → AI」。用到 `ai` 綁定的套件，安裝程式會自動加上這個權限 |
 | `network` | 連到網際網路 | `fetch()`、`WebSocket`：**只能連網際網路上的位址**，本機、區網（包括 ruvm 的閘道，也就是主機）都擋下 |
 
 * 系統應用的權限是 rucloud 的 service binding，props 是 `{ app, perms }`（Cloudflare 相容的 `ctx.props`，由安裝程式寫進設定，應用改不了）。系統應用依 props 決定能做什麼；安裝的應用只能用 `/api/v1/`，不能碰網頁或表單的路徑。共用的檢查在 `apps/_shared/grant.js`。
