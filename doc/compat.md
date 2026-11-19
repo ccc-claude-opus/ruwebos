@@ -48,14 +48,17 @@
 
 ### 之後（較大或需要外部條件）
 
-* **Workers AI**（暫不做，2026-11-19 決定）：做法會是成為權限 `ai`，使用者同意後才有 `env.AI`，AI 後端在「設定」裡選（本機模型或使用者自己的 API 金鑰），每個應用有用量統計與上限。會多出來能裝的：Inkstone、FlareMo、Sink（AI 產生短網址）。
 
 * **在系統裡建置**：在虛擬機裡用獨立的使用者或容器跑 `npm ci --ignore-scripts` 與建置；建置程式會執行第三方程式碼，要先想清楚隔離。
 * **收信（Email Routing）**：ruwebos 放在有公開網域的伺服器上，或透過 Cloudflare Email Routing 轉送進來。
 * **Browser Rendering**（在虛擬機裡跑 headless Chromium）、**Containers**（容器執行環境）：需要的資源大，等有明確需要的應用再做。
 
+### 最後：Workers AI
+
+成為權限 `ai`：使用者同意後才有 `env.AI`；AI 後端在「設定」裡選（主機上的 Ollama 等本機模型，或使用者自己的 API 金鑰）；每個應用有用量統計與上限。會多出來能裝的：Inkstone、FlareMo、Sink（AI 產生短網址）。
+
 ## 決定（2026-11-19）
 
 1. 照第 1、2、3 步的順序。
-2. Workers AI 先不做（列在「之後」）。
+2. Workers AI 放到最後做（在「之後」的項目之後）。
 3. 寄信列入第 3 步（透過使用者在「設定」填的 SMTP 帳號）。
