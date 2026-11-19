@@ -99,7 +99,6 @@ export function unsupportedBindings(cfg) {
     send_email: 'Email',
     browser: 'Browser Rendering',
     containers: 'Containers',
-    images: 'Images',
   };
   return Object.entries(names)
     .filter(([k]) => {

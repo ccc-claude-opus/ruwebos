@@ -208,7 +208,7 @@ export async function readPackage(gz, { fetcher = fetch } = {}) {
   }
   const unsupported = wranglerCfg ? unsupportedBindings(wranglerCfg) : tomlUnsupported(wranglerText);
   if (unsupported.length) {
-    throw new Error(`這個應用用到 ruwebos 還不支援的 Cloudflare 服務：${unsupported.join('、')}（安裝的應用目前能用 D1、KV、R2、Durable Objects、Vectorize、排程、Queues 與 Workflows）`);
+    throw new Error(`這個應用用到 ruwebos 還不支援的 Cloudflare 服務：${unsupported.join('、')}（安裝的應用目前能用 D1、KV、R2、Durable Objects、Vectorize、Images、排程、Queues 與 Workflows）`);
   }
   const tomlMain = /^\s*main\s*=\s*"([^"]+)"/m.exec(wranglerText)?.[1];
   const runCfg = wranglerCfg || { main: tomlMain };
@@ -264,7 +264,7 @@ export async function readPackage(gz, { fetcher = fetch } = {}) {
 
 /** wrangler.toml 裡用到的、安裝的應用不能用的綁定（粗略：看表格的名稱）。 */
 function tomlUnsupported(text) {
-  const names = { services: 'service bindings', ai: 'Workers AI', analytics_engine_datasets: 'Analytics Engine', hyperdrive: 'Hyperdrive', send_email: 'Email', browser: 'Browser Rendering', containers: 'Containers', images: 'Images' };
+  const names = { services: 'service bindings', ai: 'Workers AI', analytics_engine_datasets: 'Analytics Engine', hyperdrive: 'Hyperdrive', send_email: 'Email', browser: 'Browser Rendering', containers: 'Containers' };
   const found = new Set();
   for (const m of text.matchAll(/^\s*\[\[?\s*([a-z_]+)(?:\.[a-z_]+)?\s*\]\]?/gm)) if (names[m[1]]) found.add(names[m[1]]);
   return [...found];

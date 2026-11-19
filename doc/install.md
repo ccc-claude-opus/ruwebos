@@ -72,7 +72,7 @@ sequenceDiagram
 
 `.dev.vars`、`.env`、`.git`、`node_modules` 不會被裝進去；套件解開後上限 200 MB（下載 50 MB）。
 
-**npm 相依套件**：Worker 的程式引用了 npm 套件（`import { Hono } from 'hono'`）、套件裡又沒有 `node_modules` 時，安裝程式依 `package-lock.json`（npm 7 以上，lockfileVersion 2、3）從 `registry.npmjs.org` 下載執行時要的套件（不含 devDependencies，略過給其他平台的選用套件），逐一比對 `integrity`（sha512），放進 `node_modules/`；同意畫面列出套件數與各授權的個數。**不執行任何安裝腳本**，也不建置：wrangler 設定有 `build.command`、靜態檔案資料夾或 Worker 的程式不在套件裡（要先 `npm run build` 產生）的專案，安裝程式會說明要由作者打包。只有 `yarn.lock`、`pnpm-lock.yaml` 的專案也一樣。rucloud 載入 npm 套件時用和 wrangler 一樣的 exports 條件（`workerd`、`worker`、`browser`）。套件自己的 wrangler 設定裡不能有 `services`、`ai`、`analytics_engine_datasets`、`hyperdrive`（會碰到其他應用或伺服器的資源）；D1、KV、R2、Durable Objects、Vectorize、cron、Queues、Workflows 都可以用，資料都是這個應用自己的（佇列名稱由 rucloud 加上應用名稱前綴，別的應用碰不到）。
+**npm 相依套件**：Worker 的程式引用了 npm 套件（`import { Hono } from 'hono'`）、套件裡又沒有 `node_modules` 時，安裝程式依 `package-lock.json`（npm 7 以上，lockfileVersion 2、3）從 `registry.npmjs.org` 下載執行時要的套件（不含 devDependencies，略過給其他平台的選用套件），逐一比對 `integrity`（sha512），放進 `node_modules/`；同意畫面列出套件數與各授權的個數。**不執行任何安裝腳本**，也不建置：wrangler 設定有 `build.command`、靜態檔案資料夾或 Worker 的程式不在套件裡（要先 `npm run build` 產生）的專案，安裝程式會說明要由作者打包。只有 `yarn.lock`、`pnpm-lock.yaml` 的專案也一樣。rucloud 載入 npm 套件時用和 wrangler 一樣的 exports 條件（`workerd`、`worker`、`browser`）。套件自己的 wrangler 設定裡不能有 `services`、`ai`、`analytics_engine_datasets`、`hyperdrive`（會碰到其他應用或伺服器的資源）；D1、KV、R2、Durable Objects、Vectorize、Images、cron、Queues、Workflows 都可以用，資料都是這個應用自己的（佇列名稱由 rucloud 加上應用名稱前綴，別的應用碰不到）。
 
 ## 權限
 

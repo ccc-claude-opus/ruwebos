@@ -4,7 +4,7 @@
 
 ## 1. 只用 ruwebos 支援的服務
 
-安裝的應用能用 **D1、KV、R2、Durable Objects、Vectorize、排程（cron）、Queues 與 Workflows**，以及靜態檔案（`assets`）。用到 Workers AI、Email、Browser Rendering、Containers、Images、Analytics Engine、Hyperdrive 或 service bindings 的應用，安裝程式會直接說明哪一項不支援。之後會放寬的部分見 [compat.md](compat.md)。
+安裝的應用能用 **D1、KV、R2、Durable Objects、Vectorize、Images、排程（cron）、Queues 與 Workflows**，以及靜態檔案（`assets`）。用到 Workers AI、Email、Browser Rendering、Containers、Analytics Engine、Hyperdrive 或 service bindings 的應用，安裝程式會直接說明哪一項不支援。之後會放寬的部分見 [compat.md](compat.md)。
 
 應用在 ruwebos 裡是**私人裝置上的本機應用**（`http://<id>.localhost:8700/`），外面的人連不進來；它要能在只有一個使用者、沒有公開網域的情況下運作。
 

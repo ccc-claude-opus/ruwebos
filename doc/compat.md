@@ -64,7 +64,7 @@ ruwebos 是**一個人用的私人裝置**，應用只在本機（`localhost`）
 |---|---|
 | 在主機上打包 | `ruwebos pack <GitHub 網址>`：在開發機上 clone、`npm ci`、建置、打包成套件，再用安裝程式的「上傳套件」安裝 |
 | 安裝程式自己抓 Worker 的相依套件（2026-11-19 完成） | 依 `package-lock.json` 下載 npm 套件並比對 integrity，**不執行**任何安裝腳本；只適用於不需要前端建置的專案。rucloud 用 wrangler 的 exports 條件（`workerd`、`worker`、`browser`）載入 |
-| Images | rucloud 用 Rust 的影像函式庫實作常用的縮放、格式轉換 |
+| Images（2026-11-19 完成） | rucloud 用 Rust 的 image crate 實作 `env.IMAGES`：縮放（各種 fit）、裁切、旋轉、翻轉、模糊、亮度對比、疊圖，輸出 JPEG、PNG、WebP（無損）、GIF；不能輸出 AVIF |
 | 寄信（`send_email`）成為權限（這一步的最後） | rucloud 實作 `send_email` 綁定，透過使用者在「設定」裡填的 SMTP 寄出（例如自己的信箱帳號）；收件人限制照 Cloudflare 的規則 |
 
 ### 之後
