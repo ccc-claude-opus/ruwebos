@@ -18,7 +18,7 @@ ruwebos 是在 AI 的協助下做出來的：一個自己的瀏覽器（rubrowse
 
 目前的限制：安裝的應用能用的 Cloudflare 服務是 D1、KV、R2、Durable Objects、Vectorize、Images、排程（cron）、Queues、Workflows、寄信（只能寄給自己）與 Workers AI（用「設定」裡選的本機模型或自己的 API 金鑰）；Worker 引用的 npm 套件由安裝程式依 `package-lock.json` 下載，但需要先建置（例如前端 `npm run build`）的專案，要由作者在 GitHub Release 附上建置好的套件（[doc/publish.md](doc/publish.md)），或在電腦上打包後上傳。網路上現成的候選應用見 [doc/cloudflare-apps.md](doc/cloudflare-apps.md)，怎麼放寬這些限制見 [doc/compat.md](doc/compat.md)。
 
-安全：安裝的應用的權限預設都不給，用到時再問；系統應用拒絕從其他應用的網頁送來的表單（CSRF）；安裝的應用的伺服器端程式在 Linux 上關在 bubblewrap 的籠子裡，看不到其他資料、連不到本機與區網（[doc/isolation.md](doc/isolation.md)）。
+安全：安裝的應用的權限預設都不給，用到時再問；系統應用拒絕從其他應用的網頁送來的表單（CSRF）；安裝的應用與系統應用的伺服器端程式在 Linux 上都關在 bubblewrap 的籠子裡（加上 seccomp），看不到其他資料、連不到本機與區網（[doc/isolation.md](doc/isolation.md)）。
 
 ## 組成
 

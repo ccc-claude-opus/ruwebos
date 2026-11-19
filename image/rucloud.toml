@@ -27,7 +27,7 @@ grant = ["installer"]
 services = ["files", "settings"]
 
 # 安裝的應用的 Worker 關在 bubblewrap 的籠子裡（doc/isolation.md）：看不到其他資料、連不到本機與區網；
-# mode = "on"：開不了籠子就不啟動，免得悄悄少了這一層
+# 系統應用也是（下面每個應用的 isolate = true）。mode = "on"：開不了籠子就不啟動，免得悄悄少了這一層
 [isolation]
 mode = "on"
 user = "ruwebos-app"
@@ -35,76 +35,94 @@ user = "ruwebos-app"
 # 主畫面：http://localhost:8700、http://127.0.0.1:8700
 [[app]]
 path = "/opt/ruwebos/home"
+isolate = true
 hosts = ["localhost", "127.0.0.1"]
 
 # ---- ruwebos 的基本應用（本 repo 的 apps/；共用 apps/_shared）
 [[app]]
 path = "/opt/ruwebos/apps/files"
+isolate = true
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
 path = "/opt/ruwebos/apps/contacts"
+isolate = true
 d1_init = { DB = "schema.sql" }
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
 path = "/opt/ruwebos/apps/calendar"
+isolate = true
 d1_init = { DB = "schema.sql" }
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
 path = "/opt/ruwebos/apps/notes"
+isolate = true
 d1_init = { DB = "schema.sql" }
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
 path = "/opt/ruwebos/apps/todo"
+isolate = true
 d1_init = { DB = "schema.sql" }
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
 path = "/opt/ruwebos/apps/calculator"
+isolate = true
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
 path = "/opt/ruwebos/apps/clock"
+isolate = true
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
 path = "/opt/ruwebos/apps/photos"
+isolate = true
 d1_init = { DB = "schema.sql" }
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
 path = "/opt/ruwebos/apps/songs"
+isolate = true
 d1_init = { DB = "schema.sql" }
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
 path = "/opt/ruwebos/apps/videos"
+isolate = true
 d1_migrate = true
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
 path = "/opt/ruwebos/apps/weather"
+isolate = true
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 [[app]]
 path = "/opt/ruwebos/apps/map"
+isolate = true
 d1_init = { DB = "schema.sql" }
 
 [[app]]
 path = "/opt/ruwebos/apps/settings"
+isolate = true
+# 設定讀 rucloud 的管理埠（應用清單、寄信、AI）：籠子裡的出口代理只放行這一個本機服務
+allow_connect = ["127.0.0.1:8799"]
 env_file = "/run/ruwebos/system.env"
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 # 安裝程式；rucloud 的範例應用（friendbook、markpedia…）是它的預裝套件（public/packages/，image/gen-packages.mjs）
 [[app]]
 path = "/opt/ruwebos/apps/installer"
+isolate = true
 d1_init = { DB = "schema.sql" }
 allow_read = ["/opt/ruwebos/apps/_shared"]
 
 # ---- rucloud 的範例應用：App Builder（要用 [dynamic]，所以是系統應用；其他範例改成預裝套件）
 [[app]]
 path = "/opt/ruwebos/examples/apps/app-builder"
+isolate = true
 d1_init = { DB = "schema.sql" }

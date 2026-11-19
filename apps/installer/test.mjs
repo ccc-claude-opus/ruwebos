@@ -35,6 +35,12 @@ export default async function (t) {
   t.ok(list.files.some((f) => f.path === 'hello-files/hello.txt'), 'file written');
   html = await page();
   t.ok(html.includes('hello-files/hello.txt'), 'app lists its file');
+  // 給網路權限後連得到網際網路（在 ruwebos 裡經過籠子的出口代理）；這台機器本身連不上時略過
+  if ((await fetch('https://example.com/', { method: 'HEAD', signal: AbortSignal.timeout(5000) }).catch(() => null))?.ok) {
+    t.ok((await t.submit('/grant', { app: 'hello-files', perm: 'network', return: back, answer: 'yes' })) === back, 'network granted');
+    html = await page();
+    t.ok(/id="network">HTTP 200/.test(html), `installed app reaches the internet: ${/id="network">([^<]*)/.exec(html)?.[1]}`);
+  }
 
   await t.page('/', 'Hello Files');
   const removePage = await t.page('/apps/hello-files/remove', '保留資料', '無法復原');
