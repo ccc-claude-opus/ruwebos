@@ -48,9 +48,9 @@ case "$(uname -m)" in
     *) false ;;
 esac || { echo "install.sh: this bundle is for $arch, this machine is $(uname -m)" >&2; exit 1; }
 
-# tools the install and the start script use
+# tools the install and the start script use; bubblewrap: rucloud cages installed apps ([isolation])
 missing=
-for c in curl:curl xz:xz-utils ip:iproute2 sha256sum:coreutils; do
+for c in curl:curl xz:xz-utils ip:iproute2 sha256sum:coreutils bwrap:bubblewrap; do
     command -v "${c%%:*}" >/dev/null 2>&1 || missing="$missing ${c#*:}"
 done
 if [ -n "$missing" ]; then

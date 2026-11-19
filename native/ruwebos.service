@@ -13,6 +13,8 @@ RuntimeDirectoryMode=0700
 StateDirectory=ruwebos
 Restart=always
 RestartSec=1
+# rucloud puts each installed app's Workers in their own cgroup (memory, CPU, process limits)
+Delegate=yes
 TimeoutStopSec=10
 
 [Install]

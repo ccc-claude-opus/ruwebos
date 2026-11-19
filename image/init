@@ -9,6 +9,8 @@ export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin HOME=/root LANG=C.UTF-8
 bb=/opt/busybox
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
+# cgroup v2：rucloud 替每個安裝的應用限制記憶體、CPU 與程序數
+mount -t cgroup2 cgroup2 /sys/fs/cgroup 2>/dev/null
 mount -t devtmpfs devtmpfs /dev 2>/dev/null
 mount -t tmpfs tmpfs /tmp
 mount -t tmpfs tmpfs /run

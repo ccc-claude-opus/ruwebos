@@ -26,6 +26,12 @@ grant = ["app-builder"]
 grant = ["installer"]
 services = ["files", "settings"]
 
+# 安裝的應用的 Worker 關在 bubblewrap 的籠子裡（doc/isolation.md）：看不到其他資料、連不到本機與區網；
+# mode = "on"：開不了籠子就不啟動，免得悄悄少了這一層
+[isolation]
+mode = "on"
+user = "ruwebos-app"
+
 # 主畫面：http://localhost:8700、http://127.0.0.1:8700
 [[app]]
 path = "/opt/ruwebos/home"

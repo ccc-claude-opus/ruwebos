@@ -1,6 +1,8 @@
-# 作業系統層級的隔離（設計）
+# 作業系統層級的隔離
 
-2026-11-19。[compat.md](compat.md)「之後」的第 2 項：讓安裝的應用與建置程式關在作業系統層級的籠子裡，Node 那一層（rucloud 的沙箱）被繞過時還有第二道防線。這份是設計，還沒實作；最後面列了要決定的事。
+2026-11-19。[compat.md](compat.md)「之後」的第 2 項：讓安裝的應用與建置程式關在作業系統層級的籠子裡，Node 那一層（rucloud 的沙箱）被繞過時還有第二道防線。
+
+**進度**：階段 A～D 已完成（rucloud 的 `[isolation]`，設定見 rucloud 的 doc/deploy.md），ruwebos 的系統碟開 `mode = "on"`、使用者 `ruwebos-app`；E（seccomp）、F（系統應用）、G（在系統裡建置）還沒做。和設計不同的地方：籠子裡沒有給 `/etc/ssl` 以外的 `/etc`；綁定 API 的 socket 全機一個（靠每個應用自己的 token 分辨），每個程序池有自己的 socket 資料夾，看不到別的應用的 Worker socket。
 
 ## 威脅模型
 
@@ -142,10 +144,10 @@ bwrap 可以載入 seccomp 程式（`--seccomp FD`）。擋掉 Worker 用不到�
 
 | 階段 | 內容 | 單獨就有的好處 |
 |---|---|---|
-| A | rucloud 與 Worker 之間改用 Unix socket（Worker 的 HTTP、綁定 API），所有平台都換 | 綁定 API 不再是本機任何程式都連得到的 TCP 埠 |
-| B | Linux 上用 bwrap：mount、pid、ipc、user namespace；VM 裡換成 `ruwebos-app` 使用者 | 看不到其他應用與系統的檔案 |
-| C | network namespace 與出口代理 | 連不到本機與區網，不靠 JS 層的檢查 |
-| D | cgroup v2 的資源上限 | 一個應用拖不垮整台機器 |
+| A ✓ | rucloud 與 Worker 之間改用 Unix socket（Worker 的 HTTP、綁定 API），所有平台都換 | 綁定 API 不再是本機任何程式都連得到的 TCP 埠 |
+| B ✓ | Linux 上用 bwrap：mount、pid、ipc、user namespace；VM 裡換成 `ruwebos-app` 使用者 | 看不到其他應用與系統的檔案 |
+| C ✓ | network namespace 與出口代理 | 連不到本機與區網，不靠 JS 層的檢查 |
+| D ✓ | cgroup v2 的資源上限 | 一個應用拖不垮整台機器 |
 | E | seccomp | 減少能攻擊核心的面 |
 | F | 系統應用也進籠子 | 深度防禦 |
 | G | 建置用的籠子，開放在系統裡建置 | 使用者貼 GitHub 網址就能裝需要建置的專案 |

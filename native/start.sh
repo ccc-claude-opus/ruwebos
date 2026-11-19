@@ -33,6 +33,7 @@ sed -e "s|@ADMIN_TOKEN@|$token|" \
     -e "s|^state_dir = \"/data/rucloud\"|state_dir = \"$state/rucloud\"|" \
     -e "s|^bind = \"0.0.0.0\"|bind = \"$bind\"|" \
     -e "s|/run/ruwebos/system.env|$run/system.env|" \
+    -e 's|^mode = "on"|mode = "auto"|' \
     /opt/ruwebos/rucloud.toml > "$run/rucloud.toml"
 
 . /etc/os-release

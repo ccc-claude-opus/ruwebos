@@ -2,8 +2,10 @@
 # image/build.sh 把它匯出成 out/system.ext4；context 是 out/stage（build.sh 準備）。
 FROM node:24-trixie-slim
 # e2fsprogs：init 在第一次開機時格式化資料碟、需要時 e2fsck
-RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends e2fsprogs \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+# bubblewrap：rucloud 把安裝的應用關進籠子（[isolation]，doc/isolation.md）；ruwebos-app 是籠子裡的使用者
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends e2fsprogs bubblewrap \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --no-create-home --shell /usr/sbin/nologin ruwebos-app
 COPY rucloud /usr/local/bin/rucloud
 COPY busybox /opt/busybox
 COPY init /sbin/init
