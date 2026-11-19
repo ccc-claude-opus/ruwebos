@@ -55,6 +55,8 @@ ruwebos 安裝的應用（rucloud 的 `[install]`）只能用 **D1、KV、R2、D
 2. **多數專案要先 `npm install` 再建置**（React、Vite、TypeScript 的相依套件）。安裝程式在 Worker 裡不能跑 npm。可行的作法：在主機上先建置好再打包；或在 ruwebos 裡加一個建置步驟。前者比較單純。不需要建置的少數專案，補完第 1 項就能裝。
 3. 逐一確認：實際用到的綁定（有些「選用」的 Workers AI、Email 可以關掉）、授權檔、在 rucloud 上能不能跑。
 
+怎麼放寬這些限制（隔離、權限、建置）見 [compat.md](compat.md)。
+
 ## 來源
 
 * [theoephraim/awesome-cloudflare-selfhosted](https://github.com/theoephraim/awesome-cloudflare-selfhosted)：GitHub 上的清單（MIT）
