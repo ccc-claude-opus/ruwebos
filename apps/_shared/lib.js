@@ -164,8 +164,12 @@ export function notFound(request, app) {
   return page(request, { app, title: '找不到', status: 404, body: html`<p class="empty">找不到這一頁。</p><p><a class="btn" href="/">回到${app.name}</a></p>` });
 }
 
+const SAFE = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 /**
  * The usual Worker entry: shared assets, then the app's handler; errors become a page.
+ * Requests that change something and come from another site's or app's page are refused (CSRF);
+ * installed apps reach the /api/v1/ endpoints through service bindings (ctx.props), which pass.
  *   export default app({ name, color }, async (request, env, url) => Response | null)
  */
 export function app(info, handler) {
@@ -174,6 +178,9 @@ export function app(info, handler) {
       const url = new URL(request.url);
       const s = request.method === 'GET' ? shared(url) : null;
       if (s) return s;
+      if (!SAFE.has(request.method) && !ctx?.props?.app && crossSite(request)) {
+        return page(request, { app: info, title: '無法完成', status: 403, body: html`<p class="error">不接受從其他網站或應用的網頁送來的表單或請求。</p><p><a class="btn" href="/">回到${info.name}</a></p>` });
+      }
       try {
         return (await handler(request, env, url, ctx)) || notFound(request, info);
       } catch (e) {

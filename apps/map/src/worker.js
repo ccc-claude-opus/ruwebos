@@ -1,6 +1,14 @@
 // 釘選地圖 API：/api/markers 的 CRUD，資料存 D1。
 const json = (o, status = 200) => Response.json(o, { status });
 
+// 其他網站或應用的網頁送來的請求（瀏覽器用 Origin、Sec-Fetch-Site 標明）：不能改資料（CSRF）
+function crossSite(request) {
+  const origin = request.headers.get('origin');
+  if (origin && origin !== new URL(request.url).origin) return true;
+  const site = request.headers.get('sec-fetch-site');
+  return !!site && site !== 'same-origin' && site !== 'none';
+}
+
 // 第一次拜訪時塞幾個示範釘選
 const SEED = [
   { lat: 25.0338, lng: 121.5645, title: '台北 101', note: '地標' },
@@ -24,6 +32,9 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const p = url.pathname;
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method) && crossSite(request)) {
+      return json({ error: '不接受從其他網站或應用送來的請求' }, 403);
+    }
 
     if (p === '/api/markers' && request.method === 'GET') {
       await seed(env);

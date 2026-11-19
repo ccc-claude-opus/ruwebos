@@ -49,4 +49,10 @@ export default async function (t) {
   const stamp2 = /name="key" value="(\d+)"/.exec(trash2.text.slice(trash2.text.indexOf(`<strong>${dir}</strong>`)))[1];
   await t.submit('/trash/purge', { key: stamp2 });
   t.ok(!(await t.get('/trash')).text.includes(`<strong>${dir}</strong>`), 'purged');
+
+  // 其他應用的網頁送來的表單（CSRF）：瀏覽器帶的 Origin 或 Sec-Fetch-Site 不是自己 → 403，什麼都不做
+  const forged = (headers) => fetch(`${t.base}/mkdir`, { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded', ...headers }, body: 'dir=&name=csrf-test' });
+  t.ok((await forged({ origin: 'http://evil.localhost:8700' })).status === 403, 'cross-site Origin refused');
+  t.ok((await forged({ 'sec-fetch-site': 'cross-site' })).status === 403, 'cross-site Sec-Fetch-Site refused');
+  t.ok((await forged({ origin: 'null' })).status === 403, 'opaque origin refused');
 }

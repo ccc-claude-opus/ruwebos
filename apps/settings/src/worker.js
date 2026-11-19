@@ -7,7 +7,7 @@
 //   GET /api/v1/system  給安裝的應用（權限 system:info）：時區、語言、系統版本
 // 系統資訊與管理埠的網址、token 由 /sbin/init 寫進 env_file（SYS_*、ADMIN_URL、ADMIN_TOKEN）；
 // 直接在主機上跑（開發）時沒有這些值，頁面會註明。
-import { app, page, html, raw, homeUrl, tzOf, fmt, json, readForm, crossSite } from '../../_shared/lib.js';
+import { app, page, html, raw, homeUrl, tzOf, fmt, json, readForm } from '../../_shared/lib.js';
 import { check } from '../../_shared/grant.js';
 import { markdown } from '../../_shared/markdown.js';
 
@@ -173,7 +173,6 @@ ${list
 async function email(request, env, url) {
   let msg = '', error = '';
   if (request.method === 'POST') {
-    if (crossSite(request)) return new Response('不接受從其他網站或應用送來的表單', { status: 403 });
     const f = await readForm(request);
     try {
       if (f.action === 'clear') {

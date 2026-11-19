@@ -88,6 +88,7 @@ sequenceDiagram
 
 * 系統應用的權限是 rucloud 的 service binding，props 是 `{ app, perms }`（Cloudflare 相容的 `ctx.props`，由安裝程式寫進設定，應用改不了）。系統應用依 props 決定能做什麼；安裝的應用只能用 `/api/v1/`，不能碰網頁或表單的路徑。共用的檢查在 `apps/_shared/grant.js`。
 * 沒有 `network` 時連 `fetch` 都會丟錯；有的話仍不能連到這台裝置上的其他應用（否則就能繞過上面的權限直接呼叫 `http://files.localhost:8700/`）。`cloudflare:sockets` 與 Node 的網路模組不開放。
+* 安裝的應用的網頁不能叫系統應用做事：系統應用拒絕從其他應用或網站的網頁送來的表單與請求（瀏覽器帶的 `Origin`、`Sec-Fetch-Site`），只接受自己網頁送出的，和經過 service binding、有權限的 `/api/v1/`。
 * 不開放任意磁碟路徑：只開放經過系統應用 API 的存取，可以檢查、可以收回。
 
 ### 什麼時候詢問

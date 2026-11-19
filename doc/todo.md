@@ -32,7 +32,7 @@
 
 ## 安全
 
-* **跨應用的表單送出（CSRF）**：任何網頁（包括外部網站與安裝的應用的網頁）都能在 rubrowser 裡對 `http://files.localhost:8700/delete` 這類系統應用的表單網址送出 POST；系統應用沒有登入，所以分不出是不是使用者自己按的。要做的：rubrowser 依 Fetch 標準在非 GET 的請求送 `Origin`（以及 `Sec-Fetch-Site`），系統應用（`_shared/lib.js` 的 `app()`）拒絕來源不是自己的 POST。已有共用的檢查 `crossSite(request)`（`_shared/lib.js`），目前只用在「設定 → 寄信」；其他系統應用還沒套用。
+* ~~**跨應用的表單送出（CSRF）**~~（2026-11-19 完成）：系統應用（`_shared/lib.js` 的 `app()`，以及地圖）拒絕 `Origin` 或 `Sec-Fetch-Site` 表明是從其他網站或應用的網頁送來的、會改資料的請求（GET、HEAD、OPTIONS 以外），回 403；經過 service binding 的安裝應用（有 `ctx.props`）照權限檢查。rubrowser 依 Fetch 標準送這兩個標頭，Chrome、Firefox、Safari 本來就會送。剩下的限制：不送這兩個標頭的舊瀏覽器擋不住；GET 不能有副作用（系統應用照這個原則寫）。
 * 安裝的應用的網路限制是在 Worker 的執行環境裡擋（rucloud 的 runtime），不是作業系統層級的隔離。
 
 ## ruwebos

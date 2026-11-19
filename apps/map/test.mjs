@@ -10,4 +10,6 @@ export default async function (t) {
   t.ok(bad.status === 400, 'bad marker refused');
   t.ok((await fetch(t.base + '/api/stats')).ok, '/api/stats');
   t.ok((await fetch(t.base + `/api/markers/${id}`, { method: 'DELETE' })).ok, 'delete');
+  const forged = await fetch(`${t.base}/api/markers`, { method: 'POST', headers: { origin: 'http://evil.localhost:8700', 'content-type': 'text/plain' }, body: JSON.stringify({ lat: 1, lng: 1, title: 'csrf' }) });
+  t.ok(forged.status === 403, `cross-site post refused: ${forged.status}`);
 }
