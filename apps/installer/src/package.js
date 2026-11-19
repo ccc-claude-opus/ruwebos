@@ -5,6 +5,7 @@
 import { gunzip, gzip, isGzip, untar, tar } from './tar.js';
 import { checkPerms } from './perms.js';
 import { generateManifest, unsupportedBindings } from './detect.js';
+import { fetchDeps, needsBuild } from './deps.js';
 
 export const MAX_DOWNLOAD = 50 * 1024 * 1024;
 export const MAX_UNPACKED = 200 * 1024 * 1024;
@@ -119,7 +120,6 @@ const SECRET = /^[A-Z_][A-Z0-9_]{0,63}$/;
 const SKIP = (p) => p.split('/').some((s) => s.startsWith('._') || s === '.DS_Store' || s === '.git' || s === 'node_modules' || s === '.wrangler' || s === '.rucloud')
   || /(^|\/)(\.dev\.vars[^/]*|\.env(\.[^/]*)?)$/.test(p);
 
-/** ruwebos-app.json 的檢查；回傳整理過的內容。generated：自動產生的描述（授權可以是空的，待使用者確認）。 */
 export function checkManifest(m, { generated = false } = {}) {
   if (!m || typeof m !== 'object') throw new Error('ruwebos-app.json 不是 JSON 物件');
   const str = (k, max, required) => {
@@ -177,7 +177,11 @@ export function checkManifest(m, { generated = false } = {}) {
  * 解開並檢查套件。回傳 { manifest, files, icon }：files 是交給 rucloud 的檔案（路徑相對於應用資料夾），
  * icon 是 { type, data } 或 null。
  */
-export async function readPackage(gz) {
+/**
+ * 解開套件、檢查描述與 wrangler 設定；Worker 引用 npm 套件而套件裡沒有 node_modules 時，依 package-lock.json
+ * 下載（fetcher）。回傳 { manifest, files, icon, licenseText, deps }。
+ */
+export async function readPackage(gz, { fetcher = fetch } = {}) {
   const all = untar(await gunzip(gz), { maxBytes: MAX_UNPACKED });
   // the folder with ruwebos-app.json, else (a plain wrangler project) the one with the wrangler config:
   // at the top, or in the only folder (GitHub's archives)
@@ -204,8 +208,15 @@ export async function readPackage(gz) {
   }
   const unsupported = wranglerCfg ? unsupportedBindings(wranglerCfg) : tomlUnsupported(wranglerText);
   if (unsupported.length) {
-    throw new Error(`這個應用用到 ruwebos 還不支援的 Cloudflare 服務：${unsupported.join('、')}（安裝的應用目前能用 D1、KV、R2、Durable Objects、Vectorize 與排程）`);
+    throw new Error(`這個應用用到 ruwebos 還不支援的 Cloudflare 服務：${unsupported.join('、')}（安裝的應用目前能用 D1、KV、R2、Durable Objects、Vectorize、排程、Queues 與 Workflows）`);
   }
+  const tomlMain = /^\s*main\s*=\s*"([^"]+)"/m.exec(wranglerText)?.[1];
+  const runCfg = wranglerCfg || { main: tomlMain };
+  const build = needsBuild(files, runCfg);
+  if (build) throw new Error(`這個專案要先建置才能安裝：${build}。請作者在 GitHub Release 附上打包好的套件，或在電腦上用 ruwebos 的 tools/ruwebos-package.mjs 打包後上傳`);
+  const size = files.reduce((n, f) => n + f.data.length, 0);
+  const deps = await fetchDeps(files, runCfg, { fetcher, maxBytes: MAX_UNPACKED - size });
+  if (deps) files.push(...deps.files);
   let manifest;
   let licenseText = '';
   if (marker) {
@@ -248,7 +259,7 @@ export async function readPackage(gz) {
     if (f.data.length > 256 * 1024) throw new Error('icon 太大（上限 256 KB）');
     icon = { type, data: f.data };
   }
-  return { manifest, files, icon, licenseText };
+  return { manifest, files, icon, licenseText, deps: deps && { count: deps.count, licenses: deps.licenses, scripts: deps.scripts } };
 }
 
 /** wrangler.toml 裡用到的、安裝的應用不能用的綁定（粗略：看表格的名稱）。 */

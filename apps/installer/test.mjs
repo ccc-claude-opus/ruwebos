@@ -76,9 +76,36 @@ export default async function (t) {
   t.ok(up.status === 303, `queue upload: ${up.status}`);
   tok = /token=(\w+)/.exec(up.headers.get('location'))[1];
   t.ok((await t.submit('/install', { token: tok })).endsWith('/apps/test-queue'), 'queue app installed');
+  // Worker 引用 npm 套件、沒有 node_modules：依 package-lock.json 從 npm 下載（要能連到 registry.npmjs.org）
+  const lock = {"name":"test-npm","version":"1.0.0","lockfileVersion":3,"requires":true,"packages":{"":{"name":"test-npm","version":"1.0.0","license":"MIT"},"node_modules/hono":{"version":"4.6.20","resolved":"https://registry.npmjs.org/hono/-/hono-4.6.20.tgz","integrity":"sha512-5qfNQeaIptMaJKyoJ6N/q4gIq0DBp2FCRaLNuUI3LlJKL4S37DY/rLL1uAxA4wrPB39tJ3s+f7kgI79O4ScSug==","license":"MIT"},"node_modules/ms":{"version":"2.1.3","resolved":"https://registry.npmjs.org/ms/-/ms-2.1.3.tgz","integrity":"sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==","license":"MIT"}}};
+  const npmProject = (lockText) => gzip(tar(Object.entries({
+    'wrangler.jsonc': '{ "name": "test-npm", "main": "src/index.js" }',
+    'src/index.js': "import { Hono } from 'hono'; import ms from 'ms'; const app = new Hono(); app.get('/', (c) => c.text('hono ' + ms(60000))); export default app;",
+    'package.json': JSON.stringify({ name: 'test-npm', version: '1.0.0', license: 'MIT', dependencies: { hono: '4.6.20', ms: '2.1.3' } }),
+    'package-lock.json': lockText,
+  }).map(([path, text]) => ({ path, data: enc.encode(text) }))));
+  if ((await fetch('https://registry.npmjs.org/ms', { method: 'HEAD', signal: AbortSignal.timeout(5000) }).catch(() => null))?.ok) {
+    up = await upload('test-npm', await npmProject(JSON.stringify(lock)));
+    t.ok(up.status === 303, `npm upload: ${up.status} ${up.status === 303 ? '' : (await up.text()).slice(0, 300)}`);
+    tok = /token=(\w+)/.exec(up.headers.get('location'))[1];
+    await t.page(`/install?token=${tok}`, 'npm 套件', '2 個', 'MIT 2');
+    t.ok((await t.submit('/install', { token: tok })).endsWith('/apps/test-npm'), 'npm app installed');
+    const got = await (await fetch(t.base.replace('//installer.', '//test-npm.') + '/')).text();
+    t.ok(got === 'hono 1m', `npm app runs: ${got.slice(0, 200)}`);
+    // integrity 不符就拒絕
+    const bad = JSON.parse(JSON.stringify(lock));
+    bad.packages['node_modules/ms'].integrity = bad.packages['node_modules/hono'].integrity;
+    up = await upload('test-npm', await npmProject(JSON.stringify(bad)));
+    t.ok(up.status === 400 && (await up.text()).includes('integrity'), `integrity mismatch: ${up.status}`);
+    t.ok((await t.post('/apps/test-npm/remove', { data: 'purge' })).status === 303, 'remove test-npm');
+  } else {
+    console.log('  (skip npm: registry.npmjs.org unreachable)');
+  }
   up = await upload('test-ai', await project('test-ai', mit, '"ai": { "binding": "AI" },'));
   const refused = await up.text();
   t.ok(up.status === 400 && refused.includes('Workers AI'), `unsupported binding: ${up.status}`);
+  up = await upload('test-build', await project('test-build', mit, '"assets": { "directory": "./dist" },'));
+  t.ok(up.status === 400 && (await up.text()).includes('要先建置'), `needs a build: ${up.status}`);
   for (const id of ['test-plain', 'test-odd', 'test-queue']) t.ok((await t.post(`/apps/${id}/remove`, { data: 'purge' })).status === 303, `remove ${id}`);
 
   // 收尾：移除應用（含資料），檔案搬到垃圾桶再清掉

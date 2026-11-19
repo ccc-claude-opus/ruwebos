@@ -85,7 +85,7 @@ async function prepare(env, source, { bytes, origin = 'user', page: from = null,
   }
   let pkg;
   try {
-    pkg = await readPackage(gz);
+    pkg = await readPackage(gz, { fetcher: request ? fetcherFor(env, request) : fetch });
   } catch (e) {
     throw new UserError(`套件有問題：${e.message}`);
   }
@@ -93,7 +93,7 @@ async function prepare(env, source, { bytes, origin = 'user', page: from = null,
   await env.PKG.put(`pending/${token}`, await packFiles(pkg.files));
   if (pkg.icon) await env.PKG.put(`pending/${token}.icon`, pkg.icon.data, { httpMetadata: { contentType: pkg.icon.type } });
   await env.DB.prepare('INSERT INTO pending (token, manifest, source, origin, created_at) VALUES (?, ?, ?, ?, ?)')
-    .bind(token, JSON.stringify({ ...pkg.manifest, has_icon: !!pkg.icon, page: from, download: url, license_text: pkg.licenseText ? pkg.licenseText.slice(0, 4000) : '' }), source, origin, now())
+    .bind(token, JSON.stringify({ ...pkg.manifest, has_icon: !!pkg.icon, page: from, download: url, license_text: pkg.licenseText ? pkg.licenseText.slice(0, 4000) : '', deps: pkg.deps }), source, origin, now())
     .run();
   return token;
 }
@@ -248,6 +248,7 @@ ${m.generated ? html`<p class="muted small">這個專案沒有 ruwebos 的描述
   <tr><th>來源</th><td>${p.source.startsWith('bundled:') ? '系統碟裡的預裝套件' : p.source.startsWith('upload:') ? `上傳的套件檔 ${p.source.slice(7)}` : p.source}</td></tr>
   ${m.source ? html`<tr><th>原始碼</th><td><a href="${m.source}">${m.source}</a></td></tr>` : ''}
   ${m.homepage ? html`<tr><th>網站</th><td><a href="${m.homepage}">${m.homepage}</a></td></tr>` : ''}
+  ${m.deps ? html`<tr><th>npm 套件</th><td>${m.deps.count} 個，從 npm 下載並比對過 package-lock.json（授權：${Object.entries(m.deps.licenses).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join('、')}）${m.deps.scripts.length ? `；${m.deps.scripts.join('、')} 有安裝腳本，沒有執行` : ''}</td></tr>` : ''}
 </table>
 ${cur && cmp < 0 ? html`<p class="error">這個套件的版本比已安裝的舊。</p>` : ''}
 ${cur && cmp === 0 ? html`<p class="muted">版本和已安裝的相同，會重新安裝。</p>` : ''}

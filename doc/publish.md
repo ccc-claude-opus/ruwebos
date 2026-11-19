@@ -13,7 +13,7 @@
 | 方式 | 你要做的 | 適合 |
 |---|---|---|
 | **GitHub Release 附上套件**（建議） | 把 [tools/github-action/ruwebos-release.yml](../tools/github-action/ruwebos-release.yml) 複製到專案的 `.github/workflows/`；每次發佈 Release 時，它會 `npm ci`、建置、打包成 `<id>.ruwebos.tar.gz` 附在 Release 上 | 所有專案，特別是需要 npm 建置的（React、Vite、TypeScript 相依套件） |
-| **GitHub 儲存庫本身** | 不用做什麼；使用者在安裝程式貼上儲存庫網址，安裝程式下載原始碼 | 不需要建置、Worker 沒有引用 npm 套件的專案 |
+| **GitHub 儲存庫本身** | 不用做什麼；使用者在安裝程式貼上儲存庫網址，安裝程式下載原始碼 | 不需要建置的專案；Worker 引用的 npm 套件，安裝程式依 `package-lock.json` 下載（不執行安裝腳本） |
 | **網頁宣告套件** | 在網站的網頁裡加 `<link rel="ruwebos-app" href="/app.ruwebos.tar.gz">`；用 ruwebos 的 rubrowser 開時網址列旁會出現「安裝」 | 有自己網站的應用 |
 
 使用者給 GitHub 儲存庫的網址時，安裝程式會**先找最新 Release 裡的 `*.ruwebos.tar.gz`**，沒有才下載原始碼。

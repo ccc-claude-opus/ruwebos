@@ -16,7 +16,7 @@ ruwebos 是在 AI 的協助下做出來的：一個自己的瀏覽器（rubrowse
 
 同樣的道理，虛擬機也可以抽換（ruvm 或 QEMU），甚至不用虛擬機，直接裝在 ARM64 的 Linux 上（例如樹莓派；目前在 Docker 的 Debian 容器裡測試通過，還沒在樹莓派實機上試過，見 [doc/native.md](doc/native.md)）。
 
-目前的限制：安裝的應用能用的 Cloudflare 服務是 D1、KV、R2、Durable Objects、Vectorize、排程（cron）、Queues 與 Workflows；Workers AI、Email、Images 等還不能用，需要先建置（npm）的專案，要由作者在 GitHub Release 附上建置好的套件（[doc/publish.md](doc/publish.md)），或在電腦上打包後上傳。網路上現成的候選應用見 [doc/cloudflare-apps.md](doc/cloudflare-apps.md)，怎麼放寬這些限制見 [doc/compat.md](doc/compat.md)。
+目前的限制：安裝的應用能用的 Cloudflare 服務是 D1、KV、R2、Durable Objects、Vectorize、排程（cron）、Queues 與 Workflows；Workers AI、Email、Images 等還不能用，Worker 引用的 npm 套件由安裝程式依 `package-lock.json` 下載，但需要先建置（例如前端 `npm run build`）的專案，要由作者在 GitHub Release 附上建置好的套件（[doc/publish.md](doc/publish.md)），或在電腦上打包後上傳。網路上現成的候選應用見 [doc/cloudflare-apps.md](doc/cloudflare-apps.md)，怎麼放寬這些限制見 [doc/compat.md](doc/compat.md)。
 
 ## 組成
 
