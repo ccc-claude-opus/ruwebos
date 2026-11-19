@@ -162,7 +162,14 @@ bwrap 可以載入 seccomp 程式（`--seccomp FD`）。擋掉 Worker 用不到�
 * Ubuntu 24.04 等發行版用 AppArmor 限制沒有權限的 user namespace；native 安裝時 bwrap 用發行版自己的套件（有對應的 AppArmor 設定），偵測失敗就退回沒有這一層並明白提示。
 * `NODE_USE_ENV_PROXY` 在 ruwebos 用的 Node 版本可用，`WebSocket` 也走代理；不行的話由 `host.mjs` 自己透過代理建立連線。
 
-## 要決定的事
+## 決定（2026-11-19，照建議）
+
+1. 用 **bubblewrap**。
+2. VM 裡的 Worker 用**一個共用的** `ruwebos-app` 使用者；應用之間靠 mount namespace 分開。
+3. 系統應用**也放進籠子**（階段 F）。
+4. 預設的資源上限先用上面的例子：每個應用最多半顆 CPU、64 個程序、`/tmp` 64 MB；建置 10 分鐘、2 GB 磁碟、1.5 GB 記憶體。之後依實測調整。
+
+## 當初要決定的事
 
 1. **用 bubblewrap**（建議），還是在 rucloud 裡自己寫 namespace 的程式碼（少一個套件，但要自己確保細節正確）。
 2. VM 裡 Worker 用**一個共用的** `ruwebos-app` 使用者（建議；應用之間靠 mount namespace 分開），還是**每個應用一個** Linux 使用者（多一層，但要管理 uid）。
