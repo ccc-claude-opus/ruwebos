@@ -30,4 +30,6 @@ CREATE TABLE IF NOT EXISTS pending (
 -- 使用者移除的預裝應用：不再自動裝回來
 CREATE TABLE IF NOT EXISTS removed (id TEXT PRIMARY KEY, removed_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS favorites (id TEXT PRIMARY KEY, url TEXT NOT NULL, title TEXT NOT NULL, added_at TEXT NOT NULL);
+-- 套件說明的每個權限的用途（ruwebos-app.json 的 permission_reasons，JSON 物件）
+CREATE TABLE IF NOT EXISTS app_reasons (id TEXT PRIMARY KEY, reasons TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);

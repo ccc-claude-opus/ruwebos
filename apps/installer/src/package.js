@@ -149,6 +149,14 @@ export function checkManifest(m, { generated = false } = {}) {
   if (typeof d1Init !== 'object' || Array.isArray(d1Init) || !Object.values(d1Init).every((f) => typeof f === 'string')) {
     throw new Error('d1_init 要像 { "DB": "schema.sql" }');
   }
+  // 每個權限的用途（安裝與要求權限時顯示給使用者看）
+  const permissions = checkPerms(m.permissions);
+  const reasons = m.permission_reasons === undefined ? {} : m.permission_reasons;
+  if (typeof reasons !== 'object' || reasons === null || Array.isArray(reasons)) throw new Error('permission_reasons 要像 { "network": "取得天氣資料" }');
+  for (const [k, v] of Object.entries(reasons)) {
+    if (!permissions.includes(k)) throw new Error(`permission_reasons 的 ${k} 不在 permissions 裡`);
+    if (typeof v !== 'string' || !v.trim() || v.length > 120) throw new Error(`permission_reasons 的 ${k} 要是 120 字以內的文字`);
+  }
   const url = (k) => {
     const v = str(k, 500);
     if (v && !/^https?:\/\//.test(v)) throw new Error(`${k} 要是 http(s) 網址`);
@@ -166,7 +174,8 @@ export function checkManifest(m, { generated = false } = {}) {
     icon: str('icon', 200),
     color: color || '#5c7cfa',
     glyph: str('glyph', 4),
-    permissions: checkPerms(m.permissions),
+    permissions,
+    permission_reasons: Object.fromEntries(Object.entries(reasons).map(([k, v]) => [k, v.trim()])),
     secrets: [...new Set(secrets)],
     d1_init: d1Init,
     generated,

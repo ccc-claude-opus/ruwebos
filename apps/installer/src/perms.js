@@ -10,6 +10,14 @@ export const PERMS = {
   'system:info': { label: '讀取系統資訊', detail: '時區、語言、系統版本', icon: 'ℹ️', service: 'settings', binding: 'SYSTEM' },
 };
 
+/** 合在一起比各自危險的權限：都給的時候特別提醒。 */
+export const COMBOS = [
+  { perms: ['files:read', 'network'], warn: '可以讀取你「檔案」裡的檔案，並傳到網際網路上' },
+];
+
+/** perms（要求的或已給的）裡成立的危險組合。 */
+export const combos = (perms) => COMBOS.filter((c) => c.perms.every((p) => perms.includes(p)));
+
 /** 套件要求的權限檢查：只能是 PERMS 裡的，不重複。 */
 export function checkPerms(list) {
   if (list === undefined) return [];

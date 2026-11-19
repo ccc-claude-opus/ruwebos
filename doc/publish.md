@@ -31,7 +31,7 @@ node ruwebos/tools/ruwebos-package.mjs 你的專案 --out dist
 沒有描述檔也能安裝：安裝程式從 `wrangler.jsonc`、`package.json`（名稱、版本、說明、授權）與授權檔自動產生描述，但這樣的應用要求的權限只有「連網際網路」，而且預設不勾。放一個描述檔可以：
 
 * 寫清楚名稱、圖示、顏色與授權；
-* 宣告需要的權限（`files:read`、`files:write`、`system:info`、`email:send`、`network`），讓使用者在安裝時就能同意；
+* 宣告需要的權限（`files:read`、`files:write`、`system:info`、`email:send`、`network`），並用 `permission_reasons` 替每個權限寫一句用途（使用者在安裝與要求權限時看得到）；
 * 宣告要安裝程式產生的密鑰（例如簽 session 用的 `AUTH_SECRET`）；
 * 用 `d1_init` 指定初始的資料表（或用 `migrations/`）。
 
@@ -43,7 +43,13 @@ node ruwebos/tools/ruwebos-package.mjs 你的專案 --out dist
 
 ## 5. 權限與系統應用的 API
 
-使用者同意後，應用透過 `env.FILES`、`env.SYSTEM` 等使用系統應用的資料；沒有權限時這些綁定不存在，或回 403。需要時可以把使用者帶到安裝程式的權限頁要求。詳細見 [install.md 的「權限」](install.md#權限)。
+**ruwebos 的權限預設都不給**：安裝畫面上全部不勾，使用者要自己勾。所以應用要這樣寫：
+
+1. **沒有權限時也能用**，只是少了那項功能（例如沒有 `network` 就不顯示天氣，而不是整個壞掉）；
+2. **用到時再要求**：使用者按了需要權限的功能（例如「從檔案匯入」），發現沒有權限（綁定不存在、系統應用回 403、`fetch` 丟出沒有網路權限的錯誤），就把使用者帶到 `http://installer.localhost:8700/grant?app=<id>&perm=<權限>&return=<目前的網址>`，同意後會回來；
+3. **寫清楚用途**：`permission_reasons` 的一句話是使用者決定給不給的依據。
+
+使用者同意後，應用透過 `env.FILES`、`env.SYSTEM` 等使用系統應用的資料。詳細見 [install.md 的「權限」](install.md#權限)。
 
 ## 6. 測試
 

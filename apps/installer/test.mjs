@@ -11,9 +11,10 @@ export default async function (t) {
   const r = await t.get(`/install?src=${encodeURIComponent(`${t.base}/packages/samples/hello-files.tar.gz`)}`);
   t.ok(r.status === 303 && /token=/.test(r.location), `install: ${r.status} ${r.text.slice(0, 300)}`);
   const token = /token=(\w+)/.exec(r.location)[1];
-  await t.page(`/install?token=${token}`, 'Hello Files', '授權 MIT', '讀取「檔案」裡的檔案', '連線到網際網路');
+  const consentPage = await t.page(`/install?token=${token}`, 'Hello Files', '授權 MIT', '讀取「檔案」裡的檔案', '連線到網際網路', '不勾也能安裝', '應用的說明：「列出你在「檔案」裡的 hello-files 資料夾」', '如果同時給');
+  t.ok(!/type="checkbox"[^>]* checked/.test(consentPage.text), 'no permission is checked by default');
   t.ok((await t.submit('/install', { token, perm: ['files:read'] })).endsWith('/apps/hello-files'), 'installed');
-  await t.page('/apps/hello-files', 'Hello Files', '1.0.0', '儲存權限');
+  await t.page('/apps/hello-files', 'Hello Files', '1.0.0', '儲存權限', '應用的說明');
 
   // 只有 files:read：可以列檔案，不能寫、沒有系統資訊、不能連外
   const page = async () => (await fetch(`${app}/`)).text();
@@ -23,7 +24,9 @@ export default async function (t) {
 
   // 應用要求權限 → 同意 → 回到應用
   const back = `${app}/`;
-  await t.page(`/grant?app=hello-files&perm=files:write&return=${encodeURIComponent(back)}`, '要求', '在「檔案」裡新增、修改、刪除檔案');
+  await t.page(`/grant?app=hello-files&perm=files:write&return=${encodeURIComponent(back)}`, '要求', '在「檔案」裡新增、修改、刪除檔案', '按「寫入」時');
+  // files:read 已經給了：再要求網路時提醒危險的組合
+  await t.page(`/grant?app=hello-files&perm=network&return=${encodeURIComponent(back)}`, '允許之後，這個應用就可以讀取你「檔案」裡的檔案，並傳到網際網路上');
   t.ok((await t.get(`/grant?app=hello-files&perm=files:write&return=${encodeURIComponent('https://example.com/')}`)).status === 400, 'return must be the app');
   t.ok((await t.get(`/grant?app=hello-files&perm=photos:read&return=${encodeURIComponent(back)}`)).status === 400, 'undeclared permission');
   t.ok((await t.submit('/grant', { app: 'hello-files', perm: 'files:write', return: back, answer: 'yes' })) === back, 'granted');
@@ -62,7 +65,7 @@ export default async function (t) {
   let up = await upload('test-plain', await project('test-plain', mit));
   t.ok(up.status === 303, `plain upload: ${up.status}`);
   let tok = /token=(\w+)/.exec(up.headers.get('location'))[1];
-  await t.page(`/install?token=${tok}`, '沒有 ruwebos 的描述檔', '授權 MIT', '預設都不勾');
+  await t.page(`/install?token=${tok}`, '沒有 ruwebos 的描述檔', '授權 MIT', '權限預設都不給', '應用沒有說明為什麼需要');
   t.ok((await t.submit('/install', { token: tok })).endsWith('/apps/test-plain'), 'plain installed');
   t.ok((await (await fetch(t.base.replace('//installer.', '//test-plain.') + '/')).text()) === 'count 1', 'plain app runs');
   up = await upload('test-odd', await project('test-odd', 'Some custom terms.'));

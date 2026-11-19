@@ -8,5 +8,16 @@
   "source": "https://github.com/ccc-claude-opus/ruwebos/tree/main/apps/installer/samples/hello-files",
   "icon": "public/icon.svg",
   "color": "#0b7285",
-  "permissions": ["files:read", "files:write", "system:info", "network"]
+  "permissions": [
+    "files:read",
+    "files:write",
+    "system:info",
+    "network"
+  ],
+  "permission_reasons": {
+    "files:read": "列出你在「檔案」裡的 hello-files 資料夾",
+    "files:write": "按「寫入」時在「檔案」裡建立 hello-files/hello.txt",
+    "system:info": "顯示你的時區",
+    "network": "示範連到 example.com"
+  }
 }

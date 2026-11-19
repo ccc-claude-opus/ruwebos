@@ -54,6 +54,10 @@ sequenceDiagram
   "icon": "public/icon.svg",
   "color": "#0b7285",
   "permissions": ["files:read", "files:write", "system:info", "network"],
+  "permission_reasons": {
+    "files:read": "列出你在「檔案」裡的 hello-files 資料夾",
+    "network": "示範連到 example.com"
+  },
   "secrets": ["AUTH_SECRET"],
   "d1_init": { "DB": "schema.sql" }
 }
@@ -65,6 +69,7 @@ sequenceDiagram
 | `name`、`version` | 必填。版本像 `1.2.0`（可加 `-beta.1` 之類的預先發行標記） |
 | `license` | **必填**，SPDX 授權名稱。沒有可用授權的套件不能安裝；安裝後列在「設定 → 授權」 |
 | `permissions` | 要求的權限（見下表） |
+| `permission_reasons` | 每個權限的用途，一句話（120 字以內）：安裝畫面與要求權限的畫面上顯示成「應用的說明：「…」」；沒寫的顯示「應用沒有說明為什麼需要」 |
 | `secrets` | 密鑰名稱：安裝程式安裝時各產生一個隨機值（例如簽 session 用的金鑰），更新時沿用 |
 | `d1_init` | `{ 綁定: SQL 檔 }`：變成那個 D1 的第一個 migration（安裝的應用會自動套用 `migrations/`） |
 | `icon`、`color`、`glyph` | 主畫面的圖示（SVG、PNG、WebP、JPEG，256 KB 以內）；沒有圖示時用 `color` 底加 `glyph` 字 |
@@ -93,7 +98,9 @@ sequenceDiagram
 
 ### 什麼時候詢問
 
-**安裝時一次詢問，每項可以個別取消；之後在安裝程式的應用頁面給或收回，或由應用在需要時要求。** 不採用手機那種「第一次用到時才問」：應用的程式是伺服器端的 Worker，它呼叫 binding 時前面不一定有使用者（排程、佇列、Durable Object、另一台裝置的請求），「用到時才問」得讓請求停下來等某個畫面回答。
+**安全至上：權限預設都不給。** 安裝畫面列出應用要求的權限與它說明的用途，全部不勾，使用者要自己勾；不勾也能安裝，應用用到時再要求（見下面）。更新時原本給的保留，新要求的不勾。預裝的應用也一樣不會自動給。同時給了會比較危險的組合（目前是 `files:read` 加 `network`：可以讀檔案再傳出去）在安裝畫面、應用頁面與要求權限的畫面上特別提醒。
+
+**之後在安裝程式的應用頁面給或收回，或由應用在需要時要求。** 不採用手機那種「第一次用到時才問」：應用的程式是伺服器端的 Worker，它呼叫 binding 時前面不一定有使用者（排程、佇列、Durable Object、另一台裝置的請求），「用到時才問」得讓請求停下來等某個畫面回答。
 
 改由網頁發起：應用在需要時（例如使用者按「從檔案匯入」）把使用者帶到
 

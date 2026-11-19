@@ -12,7 +12,7 @@
 //   GET  /api/home               主畫面用的 JSON（安裝的應用與我的最愛）；第一次會先裝好預裝的應用
 //   GET  /api/apps               安裝的應用（設定用）
 import { app, page, html, redirect, readForm, json, newId, UserError } from '../../_shared/lib.js';
-import { PERMS, grantsFor } from './perms.js';
+import { PERMS, grantsFor, combos } from './perms.js';
 import { download, readPackage, packFiles, compareVersions, resolveSource, MAX_DOWNLOAD } from './package.js';
 
 const APP = { name: '安裝程式', color: '#2b8a3e' };
@@ -137,6 +137,9 @@ async function commit(env, token, granted, license = '') {
     .bind(m.id, m.name, m.version, m.description, m.license, p.source, m.homepage || m.page || '', m.author, m.color, m.glyph, m.has_icon ? 1 : 0,
       JSON.stringify(m.permissions), JSON.stringify(granted), JSON.stringify([...done]), before?.origin || p.origin, before?.installed_at || now(), now())
     .run();
+  await env.DB.prepare('INSERT INTO app_reasons (id, reasons) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET reasons = excluded.reasons')
+    .bind(m.id, JSON.stringify(m.permission_reasons || {}))
+    .run();
   await env.DB.prepare('DELETE FROM removed WHERE id = ?').bind(m.id).run();
   await env.DB.prepare('DELETE FROM pending WHERE token = ?').bind(token).run();
   await env.PKG.delete(`pending/${token}`);
@@ -157,7 +160,7 @@ async function bundledBytes(env, request, file) {
   return new Uint8Array(await r.arrayBuffer());
 }
 
-/** 裝好還沒裝的預裝應用，並更新比較舊的（預裝的應用要求的權限直接給；使用者之後可以收回）。 */
+/** 裝好還沒裝的預裝應用，並更新比較舊的。權限和使用者裝的一樣不會自動給（更新時保留原本給的），應用用到時再要求。 */
 async function bootstrap(env, request) {
   const index = await bundledIndex(env, request);
   const stamp = JSON.stringify(index.map((p) => [p.id, p.version]));
@@ -175,7 +178,7 @@ async function bootstrap(env, request) {
       try {
         const token = await prepare(env, `bundled:${p.file}`, { bytes: await bundledBytes(env, request, p.file), origin: 'bundled' });
         const pend = JSON.parse((await env.DB.prepare('SELECT manifest FROM pending WHERE token = ?').bind(token).first('manifest')));
-        await commit(env, token, pend.permissions);
+        await commit(env, token, cur ? parse(cur.granted, []).filter((x) => pend.permissions.includes(x)) : []);
       } catch (e) {
         console.error(`預裝的 ${p.id} 裝不起來：${e.message}`);
       }
@@ -194,11 +197,26 @@ function icon(a, size = 48) {
     : html`<span class="icon" style="width:${size}px;height:${size}px;border-radius:22%;background:${a.color};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:700">${a.glyph || a.name.slice(0, 1)}</span>`;
 }
 
-function permList(perms, { checked = perms, name = 'perm', fresh = [] } = {}) {
+/** 應用說明的用途；沒說明時也要讓使用者知道。 */
+const reasonOf = (reasons, p) =>
+  reasons[p] ? html`<span class="small" style="display:block">應用的說明：「${reasons[p]}」</span>` : html`<span class="muted small" style="display:block">應用沒有說明為什麼需要</span>`;
+
+/** 危險組合的提醒：perms 是要求的權限，granted 是已經給的。 */
+function comboWarnings(perms, granted = []) {
+  return combos(perms).map((c) => {
+    const both = c.perms.every((p) => granted.includes(p));
+    const names = c.perms.map((p) => `「${PERMS[p].label}」`).join('和');
+    return html`<p class="${both ? 'error' : 'muted small'}">⚠️ ${both ? `這個應用目前同時有${names}的權限：它${c.warn}。` : `如果同時給${names}，這個應用就${c.warn}。`}</p>`;
+  });
+}
+
+function permList(perms, { checked = [], name = 'perm', fresh = [], reasons = {} } = {}) {
   if (!perms.length) return html`<p class="muted">這個應用不需要任何權限。</p>`;
   return html`<div class="stack">${perms.map((p) => html`<label class="check"><input type="checkbox" name="${name}" value="${p}"${checked.includes(p) ? ' checked' : ''}>
-  <span>${PERMS[p].icon} <strong>${PERMS[p].label}</strong>${fresh.includes(p) ? html` <span class="chip">新的</span>` : ''}<span class="muted small" style="display:block">${PERMS[p].detail}</span></span></label>`)}</div>`;
+  <span>${PERMS[p].icon} <strong>${PERMS[p].label}</strong>${fresh.includes(p) ? html` <span class="chip">新的</span>` : ''}<span class="muted small" style="display:block">${PERMS[p].detail}</span>${reasonOf(reasons, p)}</span></label>`)}</div>`;
 }
+
+const reasonsOf = async (env, id) => parse(await env.DB.prepare('SELECT reasons FROM app_reasons WHERE id = ?').bind(id).first('reasons'), {});
 
 async function home(request, env) {
   const apps = (await env.DB.prepare('SELECT * FROM apps ORDER BY name').all()).results;
@@ -260,9 +278,10 @@ ${cur && cmp === 0 ? html`<p class="muted">版本和已安裝的相同，會重�
   <pre style="max-height:220px;overflow:auto;white-space:pre-wrap;font-size:13px" class="card">${m.license_text}</pre>
   <label>授權<input name="license" required maxlength="100" placeholder="MIT"></label>`}
   <h3>${update ? '更新後的權限' : '這個應用要求的權限'}</h3>
-  <p class="muted small">取消勾選的權限不會給；之後可以在這裡的應用頁面給或收回。應用在沒有權限時應該仍可使用，只是少了那些功能。</p>
-  ${m.generated ? html`<p class="muted small">自動產生的描述不知道這個應用真正需要什麼，所以預設都不勾；應用若需要，之後可以在應用頁面給。</p>` : ''}
-  ${permList(m.permissions, { checked: update ? [...was, ...fresh] : m.generated ? [] : m.permissions, fresh })}
+  ${m.permissions.length ? html`<p class="small"><strong>不勾也能安裝。</strong>${update ? '原本給的權限會保留；新要求的預設不勾。' : '權限預設都不給，'}應用用到這些功能時會再問你，到時候再決定也可以；之後也能在這裡的應用頁面給或收回。</p>` : ''}
+  ${m.generated ? html`<p class="muted small">這個專案沒有 ruwebos 的描述檔，不知道它真正需要什麼權限。</p>` : ''}
+  ${permList(m.permissions, { checked: update ? was.filter((x) => m.permissions.includes(x)) : [], fresh, reasons: m.permission_reasons || {} })}
+  ${comboWarnings(m.permissions)}
   ${mail && !mail.configured ? html`<p class="muted small">還沒設定寄信的帳號：要讓應用寄信，請到「設定」的「寄信」填寫。</p>` : ''}
   <p class="muted small">安裝的應用在自己的沙箱裡執行，有自己的資料；不能讀寫系統的檔案，也不能直接連到這台裝置上的其他應用。</p>
   <div class="row"><button class="primary" type="submit">${update ? '更新' : '安裝'}</button><a class="btn" href="/">取消</a></div>
@@ -296,7 +315,8 @@ ${a.description ? html`<p>${a.description}</p>` : ''}
 </table>
 <h3>權限</h3>
 <form class="stack" method="post" action="/apps/${a.id}/perms">
-  ${permList(requested, { checked: granted })}
+  ${permList(requested, { checked: granted, reasons: await reasonsOf(env, a.id) })}
+  ${comboWarnings(requested, granted)}
   ${requested.length ? html`<div><button type="submit">儲存權限</button></div>` : ''}
 </form>
 <h3>版本</h3>
@@ -336,7 +356,8 @@ async function grantPage(request, env, url) {
     body: html`
 <form class="stack card" method="post" action="/grant">
   <div class="row" style="gap:14px">${icon(a, 48)}<p style="margin:0">「<strong>${a.name}</strong>」要求：</p></div>
-  <p style="font-size:18px">${PERMS[perm].icon} <strong>${PERMS[perm].label}</strong><span class="muted small" style="display:block">${PERMS[perm].detail}</span></p>
+  <p style="font-size:18px">${PERMS[perm].icon} <strong>${PERMS[perm].label}</strong><span class="muted small" style="display:block">${PERMS[perm].detail}</span>${reasonOf(await reasonsOf(env, a.id), perm)}</p>
+  ${combos([...parse(a.granted, []), perm]).filter((c) => c.perms.includes(perm)).map((c) => html`<p class="error">⚠️ 允許之後，這個應用就${c.warn}（它已經有${c.perms.filter((p) => p !== perm).map((p) => `「${PERMS[p].label}」`).join('、')}的權限）。</p>`)}
   <input type="hidden" name="app" value="${a.id}"><input type="hidden" name="perm" value="${perm}"><input type="hidden" name="return" value="${back}">
   <div class="row"><button class="primary" type="submit" name="answer" value="yes">允許</button><button type="submit" name="answer" value="no">不允許</button></div>
 </form>`,
@@ -479,6 +500,7 @@ export default app(APP, async (request, env, url, ctx) => {
     const purge = form.data === 'purge';
     await admin(env, `/apps/${a.id}${purge ? '?purge=true' : ''}`, { method: 'DELETE' });
     await env.DB.prepare('DELETE FROM apps WHERE id = ?').bind(a.id).run();
+    await env.DB.prepare('DELETE FROM app_reasons WHERE id = ?').bind(a.id).run();
     await env.PKG.delete(`icons/${a.id}`);
     if (a.origin === 'bundled') await env.DB.prepare('INSERT OR REPLACE INTO removed (id, removed_at) VALUES (?, ?)').bind(a.id, now()).run();
     return redirect('/');
