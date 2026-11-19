@@ -7,7 +7,7 @@ ruwebos 把幾個獨立的專案串成一個系統，使用者看到的只有瀏
 | 部分 | 預設 | 可以換成 |
 |---|---|---|
 | 瀏覽器 | Chrome（沒有就用 rubrowser） | Firefox、Safari、[rubrowser](https://github.com/ccc-claude-opus/rubrowser)、任何指令（`--browser`） |
-| 虛擬機 | [ruvm](https://github.com/ccc-claude-opus/ruvm)：macOS 用 Hypervisor.framework（`-accel hvf`）、ARM Linux 用 KVM，其他平台用直譯器 | QEMU（`--qemu`）；之後在樹莓派上可以不用虛擬機（規劃中） |
+| 虛擬機 | [ruvm](https://github.com/ccc-claude-opus/ruvm)：macOS 用 Hypervisor.framework（`-accel hvf`）、ARM Linux 用 KVM，其他平台用直譯器 | QEMU（`--qemu`）；或不用虛擬機，直接裝在 ARM64 Linux 上（[doc/native.md](doc/native.md)） |
 | Linux（Debian 13 arm64） | 核心、檔案系統、網路；使用者不直接接觸 | 一般的 ARM64 Linux |
 | [rucloud](https://github.com/ccc-claude-opus/rucloud) | 應用伺服器：每個應用是一個 Cloudflare Workers 式的 Worker，資料放 D1、KV、R2、Durable Objects | **固定**（應用都依它的 Workers 相容 API 寫成） |
 | 應用 | 系統應用與預裝套件 | 安裝其他套件、移除預裝的（[doc/install.md](doc/install.md)） |
@@ -42,7 +42,7 @@ flowchart TB
     apps --> store
   end
 
-  native["直接安裝在 Linux 上，不用虛擬機（規劃中）"]
+  native["或：直接安裝在 ARM64 Linux 上，不用虛擬機<br/>native/install.sh（樹莓派的開機與全螢幕規劃中）"]
 
   user --> browser
   launcher -- "開啟（--browser）" --> browser
@@ -54,15 +54,13 @@ flowchart TB
     direction LR
     l1["可抽換"]
     l2[["固定"]]
-    l3["規劃中"]
   end
 
   classDef swap fill:#e7f5ff,stroke:#1c7ed6,stroke-dasharray:6 4,color:#000
   classDef fixed fill:#fff4e6,stroke:#e8590c,stroke-width:3px,color:#000
-  classDef plan fill:#f8f9fa,stroke:#adb5bd,stroke-dasharray:2 4,color:#666
-  class browser,installed,vmimpl,l1 swap
+  class browser,installed,vmimpl swap
   class rucloud,l2 fixed
-  class native,l3 plan
+  class native,l1 swap
 ```
 
 使用者只透過瀏覽器使用系統：所有應用都在 `http://<名稱>.localhost:8700/`，由虛擬機裡的 rucloud 提供，啟動器把主機的 8700 埠轉進虛擬機。安裝的應用只能透過使用者同意的權限（service binding）存取系統應用的資料。
@@ -176,6 +174,7 @@ rucloud 的範例應用 myshop、friendbook、markpedia、music、boardgame、we
 * [doc/apps.md](doc/apps.md)：基本應用（檔案、通訊錄、相機、相簿……）的規劃
 * [doc/batch1.md](doc/batch1.md)、[doc/batch2.md](doc/batch2.md)：第 1、2 批基本應用的功能、標準與實測結果
 * [doc/install.md](doc/install.md)：軟體安裝（套件、權限、安裝程式），以及怎麼寫可以安裝的應用
+* [doc/native.md](doc/native.md)：不用虛擬機，直接安裝在 Linux 上（`native/`）
 * [doc/todo.md](doc/todo.md)：待辦與已知問題
 
 開發應用時可以不經 VM，直接在主機上跑：先 `node image/gen-home.mjs ../rucloud` 與 `node image/gen-packages.mjs ../rucloud`，再 `rucloud serve $PWD/apps/dev.toml`（主畫面 `http://localhost:8790/`），測試用 `node apps/test.mjs http://localhost:8790`。

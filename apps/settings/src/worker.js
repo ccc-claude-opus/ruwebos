@@ -29,15 +29,18 @@ async function admin(env, path) {
 
 function system(request, env, url) {
   const tz = tzOf(request);
+  // native/install.sh: no VM, so "start" rather than "boot", and the data is a folder, not a disk
+  const native = env.SYS_PLATFORM === 'native';
   const rows = [
+    ['執行方式', native ? '直接在這台機器上（沒有虛擬機）' : env.SYS_OS && '虛擬機'],
     ['作業系統', env.SYS_OS],
     ['核心', env.SYS_KERNEL],
     ['CPU', env.SYS_CPUS && `${env.SYS_CPUS} 個`],
     ['Node.js', env.SYS_NODE],
     ['rucloud', env.SYS_RUCLOUD],
-    ['開機次數', env.SYS_BOOT],
-    ['這次開機', env.SYS_BOOTED_AT && fmt(env.SYS_BOOTED_AT, tz)],
-    ['資料碟（開機時）', env.SYS_DATA],
+    [native ? '啟動次數' : '開機次數', env.SYS_BOOT],
+    [native ? '這次啟動' : '這次開機', env.SYS_BOOTED_AT && fmt(env.SYS_BOOTED_AT, tz)],
+    [native ? '資料（/var/lib/ruwebos，啟動時）' : '資料碟（開機時）', env.SYS_DATA],
   ];
   const dev = !env.SYS_OS;
   return page(request, {
@@ -48,7 +51,7 @@ ${dev ? html`<p class="muted">（直接在主機上執行，沒有系統資訊�
 <table>${rows.filter(([, v]) => v).map(([k, v]) => html`<tr><th>${k}</th><td>${v}</td></tr>`)}</table>
 <h2>外觀與地區</h2>
 <table>
-  <tr><th>時區</th><td>${tz}${env.SYS_TZ ? `（系統時區 ${env.SYS_TZ}，開機時取自主機）` : ''}</td></tr>
+  <tr><th>時區</th><td>${tz}${env.SYS_TZ ? `（系統時區 ${env.SYS_TZ}，${native ? '這台機器的設定' : '開機時取自主機'}）` : ''}</td></tr>
   <tr><th>現在時間</th><td>${fmt(new Date(), tz, { dateStyle: 'full', timeStyle: 'medium' })}</td></tr>
   <tr><th>深色模式</th><td>跟隨瀏覽器與作業系統（prefers-color-scheme）</td></tr>
 </table>
@@ -73,13 +76,23 @@ async function network(request, env, url) {
   const target = 'https://deb.debian.org/';
   const r = await reach(target);
   const dev = !env.SYS_NET_IP;
-  const rows = [
-    ['介面', env.SYS_NET_IF && `${env.SYS_NET_IF}（${env.SYS_NET_DRIVER || 'virtio'}，虛擬的有線網卡）`],
-    ['MAC 位址', env.SYS_NET_MAC],
-    ['IP 位址', env.SYS_NET_IP],
-    ['預設閘道', env.SYS_NET_GW && `${env.SYS_NET_GW}（ruvm 的使用者模式網路，轉送到主機）`],
-    ['DNS', env.SYS_NET_DNS && `${env.SYS_NET_DNS}（ruvm 代為查詢，用主機的 DNS 設定）`],
-  ];
+  // native/install.sh: ruwebos runs straight on this machine (no VM), so this is its real network
+  const native = env.SYS_PLATFORM === 'native';
+  const rows = native
+    ? [
+        ['介面', env.SYS_NET_IF && `${env.SYS_NET_IF}${env.SYS_NET_DRIVER ? `（${env.SYS_NET_DRIVER}）` : ''}`],
+        ['MAC 位址', env.SYS_NET_MAC],
+        ['IP 位址', env.SYS_NET_IP],
+        ['預設閘道', env.SYS_NET_GW],
+        ['DNS', env.SYS_NET_DNS],
+      ]
+    : [
+        ['介面', env.SYS_NET_IF && `${env.SYS_NET_IF}（${env.SYS_NET_DRIVER || 'virtio'}，虛擬的有線網卡）`],
+        ['MAC 位址', env.SYS_NET_MAC],
+        ['IP 位址', env.SYS_NET_IP],
+        ['預設閘道', env.SYS_NET_GW && `${env.SYS_NET_GW}（ruvm 的使用者模式網路，轉送到主機）`],
+        ['DNS', env.SYS_NET_DNS && `${env.SYS_NET_DNS}（ruvm 代為查詢，用主機的 DNS 設定）`],
+      ];
   return page(request, {
     app: APP,
     title: '網路',
@@ -92,9 +105,9 @@ async function network(request, env, url) {
 <h2>這部裝置的網路</h2>
 ${dev ? html`<p class="muted">（直接在主機上執行，沒有 VM 的網路資訊；在 ruwebos 裡由 /sbin/init 提供。）</p>` : html`<table>${rows.filter(([, v]) => v).map(([k, v]) => html`<tr><th>${k}</th><td>${v}</td></tr>`)}</table>`}
 <h2>Wi-Fi</h2>
-<p>ruwebos 在虛擬機（ruvm）裡執行，看到的是一張虛擬的有線網卡；實際的連線由<strong>主機</strong>提供，主機用 Wi-Fi 或有線網路都可以。
+${native ? html`<p>ruwebos 直接在這台機器上執行，用的是它的網路；Wi-Fi 請在這台機器的作業系統設定（例如 Raspberry Pi OS 的網路設定或 <code>nmcli</code>）。</p>` : html`<p>ruwebos 在虛擬機（ruvm）裡執行，看到的是一張虛擬的有線網卡；實際的連線由<strong>主機</strong>提供，主機用 Wi-Fi 或有線網路都可以。
 要切換 Wi-Fi 或連到別的基地台，請在主機的系統設定操作，這裡會跟著主機的連線。</p>
-<p class="muted small">在實體裝置上直接執行 ruwebos 時，才需要無線網卡的驅動與 Wi-Fi 設定（見 ruwebos 的 doc/apps.md）。</p>`,
+<p class="muted small">在實體裝置上直接執行 ruwebos 時，才需要無線網卡的驅動與 Wi-Fi 設定（見 ruwebos 的 doc/apps.md）。</p>`}`,
   });
 }
 

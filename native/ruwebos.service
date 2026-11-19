@@ -1,0 +1,19 @@
+# ruwebos without a VM: rucloud with the ruwebos apps on http://localhost:8700/ (native/install.sh)
+[Unit]
+Description=ruwebos (rucloud with the ruwebos apps)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ruwebos
+Group=ruwebos
+ExecStart=/usr/local/lib/ruwebos/start
+RuntimeDirectory=ruwebos
+RuntimeDirectoryMode=0700
+StateDirectory=ruwebos
+Restart=always
+RestartSec=1
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

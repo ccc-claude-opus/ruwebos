@@ -3,6 +3,7 @@
 # whole on update) and out/licenses.md. The data disk out/data.ext4 is created by ./ruwebos and is
 # never touched here.
 #   image/build.sh            uses ../ruvm and ../rucloud (or RUVM=..., RUCLOUD=...)
+#   image/build.sh --stage-only   only prepares out/stage (rucloud, apps): native/pack.sh uses it
 # Needs docker (linux/arm64 images) and cargo-zigbuild.
 set -e
 cd "$(dirname "$0")/.."
@@ -36,6 +37,8 @@ rsync -a --delete $ex --exclude=/installer/samples apps/ $stage/ruwebos/apps/
 mkdir -p $stage/ruwebos/examples/apps
 rm -rf $stage/ruwebos/examples/sites
 rsync -a --delete $ex "$rucloud/apps/app-builder/" $stage/ruwebos/examples/apps/app-builder/
+
+[ "$1" = --stage-only ] && exit 0
 
 echo "== docker image ruwebos-system"
 docker build -q --platform linux/arm64 -t ruwebos-system -f image/Dockerfile $stage >/dev/null
