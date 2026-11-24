@@ -214,6 +214,7 @@ rucloud 的範例應用 myshop、friendbook、markpedia、music、boardgame、we
 * [doc/install.md](doc/install.md)：軟體安裝（套件、權限、安裝程式），以及怎麼寫可以安裝的應用
 * [doc/native.md](doc/native.md)：不用虛擬機，直接安裝在 Linux 上（`native/`）
 * [doc/todo.md](doc/todo.md)：待辦與已知問題
+* [doc/devices.md](doc/devices.md)：在平板或手機上跑（推薦的裝置與方式）
 * [doc/release.md](doc/release.md)：發佈新版本（GitHub Release 的檔案與 crates.io 上的啟動器）
 
 開發應用時可以不經 VM，直接在主機上跑：先 `node image/gen-home.mjs ../rucloud` 與 `node image/gen-packages.mjs ../rucloud`，再 `rucloud serve $PWD/apps/dev.toml`（主畫面 `http://localhost:8790/`），測試用 `node apps/test.mjs http://localhost:8790`。
