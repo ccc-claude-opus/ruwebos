@@ -15,9 +15,14 @@ mount -t devtmpfs devtmpfs /dev 2>/dev/null
 mount -t tmpfs tmpfs /tmp
 mount -t tmpfs tmpfs /run
 # the system's time zone from the launcher (ruwebos.tz=Area/City on the kernel command line); Node has its own tz data
+ISOLATION=
 for arg in $(cat /proc/cmdline); do
-    case $arg in ruwebos.tz=*) TZ=${arg#ruwebos.tz=} ;; esac
+    case $arg in
+        ruwebos.tz=*) TZ=${arg#ruwebos.tz=} ;;
+        ruwebos.isolation=*) ISOLATION=${arg#ruwebos.isolation=} ;; # on, auto or off (rucloud [isolation] mode)
+    esac
 done
+case $ISOLATION in on | auto | off | "") ;; *) ISOLATION= ;; esac
 case $TZ in *[!A-Za-z0-9_/+-]* | "") TZ=UTC ;; esac
 export TZ
 uptime() { cut -d' ' -f1 /proc/uptime; }
@@ -58,6 +63,7 @@ mkdir -p /run/ruwebos /data/ruwebos
 [ -s /data/ruwebos/admin-token ] || od -An -tx1 -N24 /dev/urandom | tr -d ' \n' > /data/ruwebos/admin-token
 chmod 600 /data/ruwebos/admin-token
 sed "s/@ADMIN_TOKEN@/$(cat /data/ruwebos/admin-token)/" /opt/ruwebos/rucloud.toml > /run/ruwebos/rucloud.toml
+[ -n "$ISOLATION" ] && sed -i "s/^mode = \"on\"/mode = \"$ISOLATION\"/" /run/ruwebos/rucloud.toml
 cat > /run/ruwebos/system.env <<EOF2
 ADMIN_URL=http://127.0.0.1:8799
 ADMIN_TOKEN=$(cat /data/ruwebos/admin-token)

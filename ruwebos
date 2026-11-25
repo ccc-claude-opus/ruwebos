@@ -6,6 +6,7 @@
 #   ./ruwebos --test                boot, run every app's test (apps/*/test.mjs) through the port forward, power off
 #   ./ruwebos --accel tcg [url]     force an accelerator (default: hvf on macOS/arm64, kvm on Linux/aarch64, else tcg)
 #   ./ruwebos --qemu                boot in QEMU (qemu-system-aarch64, machine virt) instead of ruvm: same kernel and disks
+#   ./ruwebos --kernel ruxos        the kernel: linux (Debian's, default) or ruxos (../ruxos, or RUXOS=...): same disks
 #   ./ruwebos --memory 8192         the VM's memory in MB (default 2048)
 #   ./ruwebos --keyboard always     rubrowser's on-screen keyboard: auto (after a touch; default), always, never
 #   ./ruwebos --browser chrome      the browser: chrome (its own profile in out/chrome-profile), firefox (out/firefox-
@@ -21,7 +22,7 @@ now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
 since() { perl -e "printf '%.2f', $(now) - $1"; }
 t0=$(now)
 
-accel= mode=window shot= url=http://localhost:8700/ vm=ruvm memory=2048 keyboard=auto browser=
+accel= mode=window shot= url=http://localhost:8700/ vm=ruvm memory=2048 keyboard=auto browser= kernel_kind=linux
 while [ $# -gt 0 ]; do
     case "$1" in
         --accel | -accel) accel=$2; shift ;;
@@ -32,7 +33,8 @@ while [ $# -gt 0 ]; do
         --memory) memory=$2; shift ;;
         --keyboard) keyboard=$2; shift ;;
         --browser) browser=$2; shift ;;
-        -h | --help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --kernel) kernel_kind=$2; shift ;;
+        -h | --help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) echo "ruwebos: unknown option $1" >&2; exit 2 ;;
         *) url=$1 ;;
     esac
@@ -52,10 +54,23 @@ ruvm_dir=${RUVM:-../ruvm}
 ruvm=$ruvm_dir/target/release/ruvm
 kernel=$ruvm_dir/tests/guest/out/linux/debian/arm64/linux
 initrd=$ruvm_dir/tests/guest/out/linux/root/arm64/initramfs.cpio.gz
+case $kernel_kind in
+    linux) ;;
+    ruxos)
+        # ruxos (a Linux-ABI kernel in Rust): no modules, so no initramfs; it mounts root= itself
+        ruxos_dir=${RUXOS:-../ruxos}
+        kernel=$ruxos_dir/out/aarch64/ruxos
+        if [ ! -f "$kernel" ]; then
+            [ -x "$ruxos_dir/tools/build.sh" ] || { echo "ruwebos: ruxos not found in $ruxos_dir (RUXOS=...)" >&2; exit 1; }
+            "$ruxos_dir/tools/build.sh" aarch64
+        fi
+        initrd= ;;
+    *) echo "ruwebos: --kernel takes linux or ruxos" >&2; exit 2 ;;
+esac
 if [ $vm = qemu ]; then
     qemu=${QEMU:-$(command -v qemu-system-aarch64 || true)}
     [ -n "$qemu" ] || { echo "ruwebos: qemu-system-aarch64 not found (e.g. brew install qemu, apt install qemu-system-arm)" >&2; exit 1; }
-    [ -f "$kernel" ] && [ -f "$initrd" ] || { echo "ruwebos: the guest kernel and initramfs are built in ruvm ($kernel)" >&2; exit 1; }
+    [ -f "$kernel" ] && { [ -z "$initrd" ] || [ -f "$initrd" ]; } || { echo "ruwebos: the guest kernel and initramfs are built in ruvm ($kernel)" >&2; exit 1; }
 else
     [ -x "$ruvm" ] || { echo "ruwebos: $ruvm not found; build it (cargo build --release in $ruvm_dir)" >&2; exit 1; }
 fi
@@ -119,13 +134,21 @@ pid=
 # runs in the background (boot); exec, so that $! is the VM itself
 start_vm() {
     append="console=ttyAMA0 rdinit=/init quiet ruwebos.tz=$tz"
+    initrd_opt="-initrd $initrd" legacy=
+    if [ "$kernel_kind" = ruxos ]; then
+        # the same disks through standard kernel parameters; the app cage (bubblewrap's
+        # namespaces) is not in ruxos yet, so rucloud isolates apps when it can (doc/isolation.md)
+        append="console=ttyAMA0 root=/dev/vda rootfstype=ext4 rw init=/sbin/init quiet ruwebos.tz=$tz ruwebos.isolation=auto"
+        initrd_opt=
+        legacy="-global virtio-mmio.force-legacy=false" # ruxos drives virtio 1.x (modern) devices
+    fi
     if [ $vm = qemu ]; then
         # machine virt with virtio-mmio devices (the initramfs has no PCI drivers). QEMU hands out the
         # virtio-mmio slots last-first, so the data disk comes before the system disk to get /dev/vdb.
         cpu="-cpu host -smp 4" && [ "$1" = tcg ] && cpu="-cpu max -smp 4"
         # shellcheck disable=SC2086
-        exec "$qemu" -M virt -accel "$1" $cpu -m "$memory" -display none -monitor none -serial stdio \
-            -kernel "$kernel" -initrd "$initrd" -append "$append" \
+        exec "$qemu" -M virt -accel "$1" $cpu -m "$memory" -display none -monitor none -serial stdio $legacy \
+            -kernel "$kernel" $initrd_opt -append "$append" \
             -netdev user,id=net,hostfwd=tcp::8700-:8700 -device virtio-net-device,netdev=net \
             -object rng-random,id=rng,filename=/dev/urandom -device virtio-rng-device,rng=rng \
             -drive if=none,id=data,file=out/data.ext4,format=raw -device virtio-blk-device,drive=data \
@@ -133,7 +156,7 @@ start_vm() {
     else
         # shellcheck disable=SC2046
         exec "$ruvm" -M aarch64 -m "$memory" $([ "$1" = tcg ] || echo "-accel $1 -smp 4") \
-            -kernel "$kernel" -initrd "$initrd" \
+            -kernel "$kernel" $initrd_opt \
             -drive file=out/system.ext4,snapshot=on -drive file=out/data.ext4 \
             -rng -nic user,hostfwd=tcp::8700-:8700 -serial stdio -append "$append"
     fi
@@ -179,7 +202,7 @@ if ! boot "$accel"; then
     boot tcg || { tail -n 20 $log >&2; exit 1; }
 fi
 grep -h '^== ruwebos' $log || true
-echo "ruwebos: ready after $(since "$t0") s ($vm, -accel $accel, $memory MB), $url"
+echo "ruwebos: ready after $(since "$t0") s ($vm, $kernel_kind, -accel $accel, $memory MB), $url"
 
 # rubrowser shows an Install button on pages that declare an app package, opening the installer
 installer=http://installer.localhost:8700/

@@ -28,7 +28,7 @@ ruwebos 把幾個獨立的專案串成一個系統，使用者看到的只有瀏
 |---|---|---|
 | 瀏覽器 | Chrome（沒有就用 rubrowser） | Firefox、Safari、[rubrowser](https://github.com/ccc-claude-opus/rubrowser)、任何指令（`--browser`） |
 | 虛擬機 | [ruvm](https://github.com/ccc-claude-opus/ruvm)：macOS 用 Hypervisor.framework（`-accel hvf`）、ARM Linux 用 KVM，其他平台用直譯器 | QEMU（`--qemu`）；或不用虛擬機，直接裝在 ARM64 Linux 上（[doc/native.md](doc/native.md)） |
-| Linux（Debian 13 arm64） | 核心、檔案系統、網路；使用者不直接接觸 | 一般的 ARM64 Linux |
+| Linux（Debian 13 arm64） | 核心、檔案系統、網路；使用者不直接接觸 | 一般的 ARM64 Linux；核心可換成 [ruxos](https://github.com/ccc-claude-opus/ruxos)（Rust 寫的核心，`--kernel ruxos`） |
 | [rucloud](https://github.com/ccc-claude-opus/rucloud) | 應用伺服器：每個應用是一個 Cloudflare Workers 式的 Worker，資料放 D1、KV、R2、Durable Objects | **固定**（應用都依它的 Workers 相容 API 寫成） |
 | 應用 | 系統應用與預裝套件 | 安裝其他套件、移除預裝的（[doc/install.md](doc/install.md)） |
 
@@ -48,7 +48,7 @@ flowchart TB
 
   subgraph where["rucloud 在哪裡執行（可抽換）"]
     direction LR
-    vmimpl["虛擬機：ruvm 或 QEMU<br/>加速：hvf、kvm、tcg<br/>Linux 核心（Debian 13 arm64）"]
+    vmimpl["虛擬機：ruvm 或 QEMU<br/>加速：hvf、kvm、tcg<br/>Linux 核心（Debian 13 arm64）或 ruxos"]
     native["直接裝在 ARM64 Linux 上<br/>native/install.sh、systemd<br/>（例如樹莓派）"]
   end
 
@@ -159,6 +159,7 @@ cd ruwebos && ./ruwebos
 | `./ruwebos --test` | 開機、跑每個應用的測試（`apps/*/test.mjs`）、關機 |
 | `./ruwebos --accel tcg` | 指定加速器（預設依序 hvf → kvm → tcg） |
 | `./ruwebos --qemu` | 改用 QEMU（`qemu-system-aarch64` 的 `virt` 機型）開同一份核心、系統碟與資料碟；可以和其他選項一起用 |
+| `./ruwebos --kernel ruxos` | 用 [ruxos](https://github.com/ccc-claude-opus/ruxos)（`../ruxos`，或環境變數 `RUXOS` 指定的目錄；沒建置會先建置）取代 Linux 核心，開同一份系統碟與資料碟；目前應用隔離用 `auto` |
 | `./ruwebos --memory 8192` | VM 的記憶體（MB，預設 2048） |
 | `./ruwebos --browser rubrowser` | 換瀏覽器：`chrome`、`firefox`（各用 `out/` 裡自己的設定檔，不動到你平常用的）、`safari`、`rubrowser`，或任何指令（最後會加上網址） |
 | `./ruwebos --keyboard always` | rubrowser 的虛擬鍵盤：`auto`（用手指點輸入框時出現，預設）、`always`、`never` |
