@@ -4,7 +4,8 @@
 #   /dev/vda  system.ext4 (this disk, booted with -snapshot: changes are thrown away)
 #   /dev/vdb  data.ext4 → /data (rucloud's state_dir: D1, KV, R2, Durable Objects); formatted on first boot
 # Console commands (the launcher types them): `poweroff` stops rucloud, unmounts /data and powers off;
-# `status`; `crash-rucloud` kills rucloud to test the watchdog.
+# `status` and `diag` print the state of rucloud, memory and TCP sockets (for debugging);
+# `crash-rucloud` kills rucloud to test the watchdog.
 export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin HOME=/root LANG=C.UTF-8
 bb=/opt/busybox
 mount -t proc proc /proc
@@ -129,10 +130,25 @@ shutdown() {
 while read -r cmd; do
     case "$cmd" in
         poweroff) shutdown ;;
-        status) echo "== ruwebos: up $(uptime) s, rucloud pid $(cat /run/rucloud.pid)" ;;
+        status)
+            p=$(cat /run/rucloud.pid)
+            alive=dead; [ -d /proc/$p ] && alive=running
+            used=$($bb awk '/^MemTotal:/ {t = $2} /^MemAvailable:/ {a = $2} END {printf "%d", (t - a) / 1024}' /proc/meminfo)
+            echo "== ruwebos: up $(uptime) s, rucloud pid $p ($alive), memory used $used MB, $(ls /proc/$p/fd 2>/dev/null | $bb wc -l) open files" ;;
+        diag)
+            # is the edge answering inside the guest, and the TCP sockets by state (/proc/net/tcp)
+            local_ok=$($bb wget -S -T 3 -O /dev/null http://127.0.0.1:8700/ 2>&1 | $bb grep -m1 -E 'HTTP/|wget:' | $bb tr -s ' ')
+            states=$($bb awk 'NR > 1 {n[$4]++} END {for (s in n) printf " %s:%d", s, n[s]}' /proc/net/tcp)
+            # the busiest local ports of TIME_WAIT sockets (hex)
+            tw=$($bb awk 'NR > 1 && $4 == "06" {split($2, l, ":"); split($3, r, ":"); n[l[2] "->" r[2]]++} END {for (k in n) print n[k], k}' /proc/net/tcp | $bb sort -rn | $bb head -3 | $bb tr '\n' ' ')
+            echo "== ruwebos: edge locally: $local_ok; tcp states (hex):$states; time-wait by local->remote port: $tw"
+            # rucloud's threads: name, state, kernel wait channel, current system call
+            for t in /proc/$(cat /run/rucloud.pid)/task/*; do
+                echo "== thread ${t##*/} $(cat $t/comm) $($bb awk '{print $3}' $t/stat) $(cat $t/wchan 2>/dev/null) syscall $(cut -d' ' -f1-3 $t/syscall 2>/dev/null)"
+            done | $bb sort -k4 | $bb uniq -c -f3 ;;
         crash-rucloud) kill -KILL "$(cat /run/rucloud.pid)" ;; # tests the watchdog
         "") ;;
-        *) echo "== ruwebos: unknown command '$cmd' (poweroff, status, crash-rucloud)" ;;
+        *) echo "== ruwebos: unknown command '$cmd' (poweroff, status, diag, crash-rucloud)" ;;
     esac
 done
 exec sleep infinity
