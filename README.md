@@ -159,7 +159,7 @@ cd ruwebos && ./ruwebos
 | `./ruwebos --test` | 開機、跑每個應用的測試（`apps/*/test.mjs`）、關機 |
 | `./ruwebos --accel tcg` | 指定加速器（預設依序 hvf → kvm → tcg） |
 | `./ruwebos --qemu` | 改用 QEMU（`qemu-system-aarch64` 的 `virt` 機型）開同一份核心、系統碟與資料碟；可以和其他選項一起用 |
-| `./ruwebos --kernel ruxos` | 用 [ruxos](https://github.com/ccc-claude-opus/ruxos)（`../ruxos`，或環境變數 `RUXOS` 指定的目錄；沒建置會先建置）取代 Linux 核心，開同一份系統碟與資料碟；目前應用隔離用 `auto` |
+| `./ruwebos --kernel ruxos` | 用 [ruxos](https://github.com/ccc-claude-opus/ruxos)（`../ruxos`，或環境變數 `RUXOS` 指定的目錄；沒建置會先建置）取代 Linux 核心，開同一份系統碟與資料碟，應用一樣關在籠子裡（bubblewrap 的 namespace、seccomp、cgroup v2） |
 | `./ruwebos --memory 8192` | VM 的記憶體（MB，預設 2048） |
 | `./ruwebos --browser rubrowser` | 換瀏覽器：`chrome`、`firefox`（各用 `out/` 裡自己的設定檔，不動到你平常用的）、`safari`、`rubrowser`，或任何指令（最後會加上網址） |
 | `./ruwebos --keyboard always` | rubrowser 的虛擬鍵盤：`auto`（用手指點輸入框時出現，預設）、`always`、`never` |

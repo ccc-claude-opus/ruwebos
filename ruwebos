@@ -136,9 +136,8 @@ start_vm() {
     append="console=ttyAMA0 rdinit=/init quiet ruwebos.tz=$tz"
     initrd_opt="-initrd $initrd" legacy=
     if [ "$kernel_kind" = ruxos ]; then
-        # the same disks through standard kernel parameters; the app cage (bubblewrap's
-        # namespaces) is not in ruxos yet, so rucloud isolates apps when it can (doc/isolation.md)
-        append="console=ttyAMA0 root=/dev/vda rootfstype=ext4 rw init=/sbin/init quiet ruwebos.tz=$tz ruwebos.isolation=auto"
+        # the same disks through standard kernel parameters (and the same app cage as with Linux)
+        append="console=ttyAMA0 root=/dev/vda rootfstype=ext4 rw init=/sbin/init quiet ruwebos.tz=$tz"
         initrd_opt=
         legacy="-global virtio-mmio.force-legacy=false" # ruxos drives virtio 1.x (modern) devices
     fi

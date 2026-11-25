@@ -145,7 +145,15 @@ while read -r cmd; do
             # rucloud's threads: name, state, kernel wait channel, current system call
             for t in /proc/$(cat /run/rucloud.pid)/task/*; do
                 echo "== thread ${t##*/} $(cat $t/comm) $($bb awk '{print $3}' $t/stat) $(cat $t/wchan 2>/dev/null) syscall $(cut -d' ' -f1-3 $t/syscall 2>/dev/null)"
-            done | $bb sort -k4 | $bb uniq -c -f3 ;;
+            done | $bb sort -k4 | $bb uniq -c -f3
+            # the caged Workers: a seccomp filter, a PID namespace of their own, the unprivileged user
+            sc=0 nsp=0 app=0
+            for st in /proc/[0-9]*/status; do
+                [ "$($bb awk '/^Seccomp:/ {print $2}' $st 2>/dev/null)" = 2 ] && sc=$((sc + 1))
+                [ "$($bb awk '/^NSpid:/ {print NF - 1}' $st 2>/dev/null)" -gt 1 ] 2>/dev/null && nsp=$((nsp + 1))
+                [ "$($bb awk '/^Uid:/ {print $2}' $st 2>/dev/null)" = 999 ] && app=$((app + 1))
+            done
+            echo "== ruwebos: processes with a seccomp filter: $sc, in a nested PID namespace: $nsp, running as uid 999: $app" ;;
         crash-rucloud) kill -KILL "$(cat /run/rucloud.pid)" ;; # tests the watchdog
         "") ;;
         *) echo "== ruwebos: unknown command '$cmd' (poweroff, status, diag, crash-rucloud)" ;;

@@ -161,6 +161,7 @@ bwrap 可以載入 seccomp 程式（`--seccomp FD`）。擋掉 Worker 用不到�
 ## 要確認的事（實作前）
 
 * ruvm 用的 Debian arm64 核心有開 user namespace、cgroup v2、seccomp（Debian 預設都有，要在 VM 裡實際試）。
+* [ruxos](https://github.com/ccc-claude-opus/ruxos)（`--kernel ruxos`）也實作了籠子用到的部分：user、mount、PID、network、UTS、IPC、cgroup namespace，`pivot_root`、`openat2`，seccomp 過濾，cgroup v2 的 `memory.max`、`pids.max`、`cpu.max`。`mode = "on"` 下 14 個應用測試都通過；主控台的 `diag` 會列出有 seccomp 過濾、在自己的 PID namespace、以 uid 999 執行的程序數，Linux 與 ruxos 上一樣。
 * Ubuntu 24.04 等發行版用 AppArmor 限制沒有權限的 user namespace；native 安裝時 bwrap 用發行版自己的套件（有對應的 AppArmor 設定），偵測失敗就退回沒有這一層並明白提示。
 * `NODE_USE_ENV_PROXY` 在 ruwebos 用的 Node 版本可用，`WebSocket` 也走代理；不行的話由 `host.mjs` 自己透過代理建立連線。
 
